@@ -1,0 +1,27 @@
+name: vulkan
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "vulkan/**"
+      - ".github/workflows/vulkan.yml"
+jobs:
+  march:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the Vulkan loader and a software GPU
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc libvulkan-dev mesa-vulkan-drivers
+      - name: Build
+        run: gcc -O2 -o ashspore-vk vulkan/main.c -lvulkan -lm
+      - name: Run
+        run: |
+          icd=$(ls /usr/share/vulkan/icd.d/*lvp*.json | head -1)
+          echo "ICD=$icd"
+          VK_ICD_FILENAMES="$icd" ./ashspore-vk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: march-frame
+          path: ashspore.ppm

@@ -44,11 +44,39 @@
     .screen.on { display: flex; }
     #title {
       background:
-        radial-gradient(ellipse at 50% 28%, rgba(255,106,42,.28), transparent 46%),
-        radial-gradient(ellipse at 70% 80%, rgba(125,255,154,.08), transparent 40%),
-        linear-gradient(#120b08, #070504);
+        linear-gradient(#0b0706cc, #0b0706ee),
+        url("art/title.jpg") center 30% / cover no-repeat;
       align-items: center; justify-content: center; text-align: center; padding: 24px;
     }
+    .cast {
+      display: flex; gap: 8px; justify-content: center; margin: 0 0 18px; flex-wrap: wrap;
+    }
+    .cast img {
+      width: 64px; height: 64px; object-fit: cover; object-position: top;
+      border-radius: 50%; border: 2px solid #ffb347; box-shadow: 0 0 16px #ff6a2a66;
+    }
+    #vaultwrap { flex: 1; overflow-y: auto; overflow-x: hidden; background:
+      linear-gradient(#0b0706cc, #0b0706d8),
+      url("art/hold.jpg") center top / cover no-repeat;
+    }
+    .face img, .slot img {
+      width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 50%;
+    }
+    .face { overflow: hidden; padding: 0; }
+    #worldwrap {
+      position: relative; height: 340px; background:
+        url("art/world.jpg") center / cover no-repeat;
+      border: 1px solid #2a3a20; border-radius: 12px; margin: 8px 0 10px; overflow: hidden;
+    }
+    .region {
+      position: absolute; width: 52px; height: 52px; border-radius: 50%;
+      border: 2px solid #e8d7b0; background: #1a1810cc; display: flex;
+      flex-direction: column; align-items: center; justify-content: center;
+      font-size: 8px; font-weight: 800; color: var(--bone); text-align: center;
+      line-height: 1.05; transform: translate(-50%,-50%);
+      text-shadow: 0 1px 2px #000;
+    }
+    #battle { background: #0c0a08 url("art/battle.jpg") center / cover no-repeat; }
     .logo {
       font-size: clamp(42px, 12vw, 72px); letter-spacing: .18em; font-weight: 800;
       color: var(--ember2); text-shadow: 0 0 24px #ff6a2a88, 0 4px 0 #3a1208;
@@ -93,17 +121,6 @@
       grid-column: 1 / -1; font-size: 11px; color: #c9e8b8; letter-spacing: .04em;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    #worldwrap { position: relative; height: 300px; background:
-      radial-gradient(ellipse at 50% 50%, #1a2414, #0b0706 70%);
-      border: 1px solid #2a3a20; border-radius: 12px; margin: 8px 0 10px; overflow: hidden;
-    }
-    .region {
-      position: absolute; width: 58px; height: 58px; border-radius: 50%;
-      border: 2px solid #4a5a38; background: #1a1810; display: flex;
-      flex-direction: column; align-items: center; justify-content: center;
-      font-size: 9px; font-weight: 800; color: var(--bone); text-align: center;
-      line-height: 1.1; transform: translate(-50%,-50%);
-    }
     .region.hot { box-shadow: 0 0 16px #6dff7a88; }
     .statgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px; }
     .statbox { background: #211610; border-radius: 8px; padding: 8px; text-align: center; }
@@ -111,9 +128,6 @@
     .statbox small { color: var(--muted); }
 
     /* VAULT SCROLL */
-    #vaultwrap { flex: 1; overflow-y: auto; overflow-x: hidden; background:
-      repeating-linear-gradient(90deg, #100a08 0 18px, #0e0907 18px 36px);
-    }
     #vault { padding: 10px 8px 110px; display: flex; flex-direction: column; gap: 10px; }
     .floor {
       display: grid; grid-template-columns: 1fr 28px 1fr 1fr; gap: 6px; min-height: 108px;
@@ -127,8 +141,8 @@
     }
     .room {
       position: relative; border-radius: 10px; min-height: 108px;
-      background: #1c120e; border: 1px solid #3a281e;
-      overflow: hidden; padding: 8px;
+      background: #1c120ecc; border: 1px solid #3a281e;
+      overflow: hidden; padding: 8px; backdrop-filter: blur(2px);
     }
     .room.empty {
       background: repeating-linear-gradient(45deg, #14100c, #14100c 6px, #18120e 6px 12px);
@@ -240,7 +254,14 @@
 <body>
   <div id="app">
     <section id="title" class="screen on">
-      <div style="font-size:54px;line-height:1">🔥🍄</div>
+      <div class="cast">
+        <img src="art/chief.jpg" alt="Chief Ashborn" />
+        <img src="art/thorn.jpg" alt="Thorn Wilds" />
+        <img src="art/moss.jpg" alt="Moss Sporekin" />
+        <img src="art/lumen.jpg" alt="Lumen Emberfell" />
+        <img src="art/raider.jpg" alt="Ash-Raider" />
+        <img src="art/oldone.jpg" alt="The Old One" />
+      </div>
       <h1 class="logo">ASHSPORE</h1>
       <div class="tag">HOLD • TRIBE • WILD WARS</div>
       <p class="blurb">
@@ -305,14 +326,14 @@ const ROOM_DEFS = {
 const STATS = ["brawn","sight","grit","voice","craft"];
 
 const REGIONS = [
-  { id:"glen", name:"Ashen Glen", x:50, y:52, pop:12000, climate:"temperate", links:["ribs","dewfen","crow"] },
-  { id:"ribs", name:"Rib-Cairn", x:28, y:32, pop:8000, climate:"cold", links:["glen","night","crow"] },
-  { id:"dewfen", name:"Dewfen", x:72, y:38, pop:9000, climate:"humid", links:["glen","coast","ember"] },
-  { id:"crow", name:"Crow Pass", x:48, y:28, pop:5000, climate:"cold", links:["glen","ribs","night"] },
-  { id:"coast", name:"Bone Coast", x:84, y:62, pop:11000, climate:"humid", links:["dewfen","ember","mouth"] },
-  { id:"ember", name:"Ember Wastes", x:62, y:78, pop:4000, climate:"hot", links:["dewfen","coast","glen"] },
-  { id:"night", name:"Nightwood", x:18, y:58, pop:7000, climate:"cold", links:["ribs","crow","mouth"] },
-  { id:"mouth", name:"Old One Mouth", x:30, y:82, pop:6000, climate:"hot", links:["night","coast","ember"] },
+  { id:"glen", name:"Ashen Glen", x:50, y:48, pop:12000, climate:"temperate", links:["ribs","dewfen","crow"] },
+  { id:"ribs", name:"Rib-Cairn", x:18, y:20, pop:8000, climate:"cold", links:["glen","night","crow"] },
+  { id:"dewfen", name:"Dewfen", x:78, y:20, pop:9000, climate:"humid", links:["glen","coast","ember"] },
+  { id:"crow", name:"Crow Pass", x:50, y:12, pop:5000, climate:"cold", links:["glen","ribs","night"] },
+  { id:"coast", name:"Bone Coast", x:86, y:50, pop:11000, climate:"humid", links:["dewfen","ember","mouth"] },
+  { id:"ember", name:"Ember Wastes", x:60, y:78, pop:4000, climate:"hot", links:["dewfen","coast","glen"] },
+  { id:"night", name:"Nightwood", x:16, y:48, pop:7000, climate:"cold", links:["ribs","crow","mouth"] },
+  { id:"mouth", name:"Old One Mouth", x:20, y:80, pop:6000, climate:"hot", links:["night","coast","ember"] },
 ];
 
 const EVOLUTIONS = [
@@ -388,10 +409,10 @@ function newDweller(role, forced={}) {
 
 function blankHold() {
   const dwellers = [
-    newDweller("chief", { name:"Chief Ashborn", icon:"👑", brawn:4, sight:3, grit:5, voice:6, craft:3, happy:80 }),
-    newDweller("hunter", { name:"Thorn Wilds", icon:"🏹", brawn:3, grit:5, sight:4 }),
-    newDweller("gatherer", { name:"Moss Sporekin", icon:"🧺", craft:5, voice:3 }),
-    newDweller("seer", { name:"Lumen Emberfell", icon:"🕯️", voice:5, sight:4 }),
+    newDweller("chief", { name:"Chief Ashborn", icon:"👑", portrait:"art/chief.jpg", brawn:4, sight:3, grit:5, voice:6, craft:3, happy:80 }),
+    newDweller("hunter", { name:"Thorn Wilds", icon:"🏹", portrait:"art/thorn.jpg", brawn:3, grit:5, sight:4 }),
+    newDweller("gatherer", { name:"Moss Sporekin", icon:"🧺", portrait:"art/moss.jpg", craft:5, voice:3 }),
+    newDweller("seer", { name:"Lumen Emberfell", icon:"🕯️", portrait:"art/lumen.jpg", voice:5, sight:4 }),
   ];
   const floors = [
     { id:0, kind:"gate", slots:[
@@ -444,6 +465,15 @@ function load(){
   try {
     const s = JSON.parse(localStorage.getItem("ashspore_v1"));
     if (s && !s.plague) s.plague = blankPlague();
+    if (s && s.dwellers) {
+      const port = {
+        "Chief Ashborn":"art/chief.jpg",
+        "Thorn Wilds":"art/thorn.jpg",
+        "Moss Sporekin":"art/moss.jpg",
+        "Lumen Emberfell":"art/lumen.jpg"
+      };
+      s.dwellers.forEach(d => { if (port[d.name]) d.portrait = port[d.name]; });
+    }
     return s;
   } catch(e){ return null; }
 }
@@ -501,7 +531,7 @@ function consumeAndProduce(dt){
 
   const nursery = allRooms().find(({room})=>room.type==="nursery" && room.workers.length>=2);
   if (nursery && S.dwellers.length < popCap() && Math.random() < 0.002*dt) {
-    const baby = newDweller("youth", { icon:"🧒", brawn:1, sight:1, grit:1, voice:2, craft:1, name: pick(NAMES)+" Newborn" });
+    const baby = newDweller("youth", { icon:"🧒", portrait:"art/moss.jpg", brawn:1, sight:1, grit:1, voice:2, craft:1, name: pick(NAMES)+" Newborn" });
     S.dwellers.push(baby);
     pushLog(baby.name + " draws first breath in the pairing hollow.");
     toast("A child of the hold is born.");
@@ -815,7 +845,7 @@ function renderHold(){
           <div class="meta">${def.prod ? def.prod.toUpperCase()+" +"+(def.base*room.lv).toFixed(1) : (def.pop? ("+"+(def.pop*room.lv)+" beds") : (def.war?"Expeditions": def.defense?"Defense "+defense(): ""))}</div>
           <div class="slots">${Array.from({length: (def.slots||0)+(room.lv-1)}).map((_,i)=> {
             const w = wr[i];
-            return `<div class="slot ${w?"filled":""}" title="${w?w.name:""}">${w?w.icon:""}</div>`;
+            return `<div class="slot ${w?"filled":""}" title="${w?w.name:""}">${faceHTML(w)}</div>`;
           }).join("")}</div>
           <div class="bubble ${room.ready>=8?"on":""}">${room.ready>=8?Math.floor(room.ready):""}</div>`;
         el.onclick = (e) => {
@@ -876,9 +906,13 @@ function openRoom(room){
     };
   });
 }
+function faceHTML(d){
+  if (d && d.portrait) return `<img src="${d.portrait}" alt="">`;
+  return d ? (d.icon||"•") : "";
+}
 function personRow(d, assigned){
   return `<div class="row">
-    <div class="face">${d.icon}</div>
+    <div class="face">${faceHTML(d)}</div>
     <div style="flex:1"><b>${d.name}</b><small>B${d.brawn} S${d.sight} G${d.grit} V${d.voice} C${d.craft} · HP ${Math.floor(d.hp)}</small></div>
     <button class="mini" data-${assigned?"free":"assign"}="${d.id}">${assigned?"PULL":"POST"}</button>
   </div>`;
@@ -888,8 +922,12 @@ function openPeople(){
   closeSheets();
   const el = $("sheetPeople"); el.classList.add("on");
   el.innerHTML = `<h2>TRIBE · ${S.dwellers.length}/${popCap()}</h2>
+    <div class="row" style="display:block">
+      <img src="art/chief.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;border-radius:10px;margin-bottom:8px" alt="Chief Ashborn">
+      <small>Chief Ashborn keeps the hearth. Thorn hunts the Nightwood. Moss gathers Dewfen light. Lumen speaks to the fire. The Ash-Raider and the Old One wait outside.</small>
+    </div>
     ${S.dwellers.map(d=>`<div class="row">
-      <div class="face">${d.icon}</div>
+      <div class="face">${faceHTML(d)}</div>
       <div style="flex:1"><b>${d.name}</b><small>${d.role} · ${d.room? (ROOM_DEFS[roomById(d.room).type].name) : "idle"} · B${d.brawn} S${d.sight} G${d.grit} V${d.voice} C${d.craft}</small></div>
     </div>`).join("")}
     <button class="mini" style="width:100%" onclick="document.getElementById('sheetPeople').classList.remove('on')">CLOSE</button>`;
@@ -1263,7 +1301,14 @@ function loopBattle(){
 function drawBattle(ctx, c){
   const w=c.width, h=c.height;
   ctx.clearRect(0,0,w,h);
-  ctx.fillStyle = "#0e0b08"; ctx.fillRect(0,0,w,h);
+  if (drawBattle.bg) {
+    ctx.globalAlpha = 0.55;
+    ctx.drawImage(drawBattle.bg, 0, 0, w, h);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#0e0b0888"; ctx.fillRect(0,0,w,h);
+  } else {
+    ctx.fillStyle = "#0e0b08"; ctx.fillRect(0,0,w,h);
+  }
   // veins
   ctx.strokeStyle = "#3a2a1c"; ctx.lineWidth = 3*devicePixelRatio;
   battle.edges.forEach(([a,b])=>{
@@ -1340,6 +1385,8 @@ document.querySelectorAll(".pct").forEach(b => b.onclick = () => {
   document.querySelectorAll(".pct").forEach(x=>x.classList.toggle("on", x===b));
 });
 if (load()) $("btnCont").style.display = "block";
+drawBattle.bg = new Image();
+drawBattle.bg.src = "art/battle.jpg";
 
 ["sheetPeople","sheetBuild","sheetWar","sheetStrain","sheetLog"].forEach(id => {
   $(id).addEventListener("click", e => { if (e.target.id===id) $(id).classList.remove("on"); });

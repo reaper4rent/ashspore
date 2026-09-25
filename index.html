@@ -120,6 +120,7 @@
       <div id="pads">
         <div id="stick"><div id="knob"></div></div>
         <div class="row">
+          <button class="act" id="btnPow">POW</button>
           <button class="act" id="btnAct">ACT</button>
           <button class="jump" id="btnJ">JUMP</button>
         </div>
@@ -143,6 +144,20 @@ const ROOM_DEFS = {
   barracks:{name:"Spore Barracks",prod:null,slots:2,war:true,stat:"grit",cost:{bone:80,food:20}},
   watchgate:{name:"Watchgate",prod:null,slots:2,defense:true,stat:"grit",cost:{bone:60}},
   nursery:{name:"Pairing Hollow",prod:null,slots:2,breed:true,stat:"voice",cost:{bone:90,food:25}},
+  ossuary:{name:"Ossuary",prod:"bone",base:2.0,slots:2,stat:"grit",cost:{bone:40,ember:6}},
+  ribkiln:{name:"Rib Kiln",prod:"ember",base:1.6,slots:2,stat:"brawn",cost:{bone:45,food:8}},
+  gillpool:{name:"Gill Pool",prod:"dew",base:3.0,slots:2,stat:"sight",cost:{bone:35,food:10}},
+  mistbed:{name:"Mist Nursery",prod:"food",base:1.8,slots:2,stat:"craft",cost:{bone:30,dew:8}},
+  roost:{name:"Crow Roost",prod:"spirit",base:1.4,slots:2,stat:"sight",cost:{bone:40,spirit:4}},
+  beacon:{name:"Pass Beacon",prod:null,slots:2,defense:true,stat:"sight",cost:{bone:55}},
+  tideshrine:{name:"Tide Shrine",prod:"spirit",base:2.0,slots:2,stat:"voice",cost:{bone:60,dew:10}},
+  saltbed:{name:"Salt Bed",prod:"food",base:2.4,slots:2,stat:"craft",cost:{bone:35,dew:6}},
+  slagpit:{name:"Slag Pit",prod:"ember",base:3.2,slots:2,stat:"brawn",cost:{bone:40,food:12}},
+  warden:{name:"War Den",prod:null,pop:3,slots:0,cost:{bone:55,ember:10}},
+  hushaltar:{name:"Hush Altar",prod:"spirit",base:2.2,slots:2,stat:"voice",cost:{bone:70,spirit:6}},
+  shadowden:{name:"Shadow Den",prod:null,pop:5,slots:0,cost:{bone:60,food:10}},
+  mawpit:{name:"Maw Pit",prod:"bone",base:2.4,slots:2,stat:"grit",cost:{bone:50,spirit:8}},
+  oldaltar:{name:"Old Altar",prod:"spirit",base:2.4,slots:2,stat:"voice",cost:{bone:80,spirit:10}},
 };
 const REGIONS = [
   {id:"glen",name:"Ashen Glen",x:50,y:48,pop:12000,climate:"temperate",links:["ribs","dewfen","crow"]},
@@ -178,7 +193,117 @@ const UNITS = {
   veinwalker:{name:"Vein-Walker",file:"veinwalker",speed:250,atk:9,hp:75},
   convert:{name:"Fervor Convert",file:"convert",speed:190,atk:16,hp:95},
   seerspark:{name:"Seer-Spark",file:"seerspark",speed:220,atk:11,hp:60,hover:true},
+  ossward:{name:"Ossuary Ward",file:"boneguard",speed:130,atk:11,hp:160},
+  gilldiver:{name:"Gill-Diver",file:"veinwalker",speed:230,atk:9,hp:90},
+  crowkin:{name:"Crow-Kin",file:"seerspark",speed:270,atk:10,hp:52,hover:true},
+  tidepriest:{name:"Tide-Priest",file:"capthrow",speed:170,atk:13,hp:88},
+  slagraider:{name:"Slag Raider",file:"convert",speed:200,atk:18,hp:85},
+  nightstalk:{name:"Night-Stalker",file:"veinwalker",speed:260,atk:12,hp:68},
+  mouthspawn:{name:"Mouth-Spawn",file:"boneguard",speed:140,atk:15,hp:140},
 };
+const FACTIONS = {
+  ashborn:{
+    id:"ashborn", region:"glen", name:"Ashborn Hearth", color:"#ff8a3d",
+    chief:"Chief Ashborn", names:["Ashborn","Emberfell"],
+    buildings:["hearth","glowcap","sporebed","dewcatcher","den","altar","barracks","watchgate","nursery"],
+    start:["watchgate","hearth","glowcap","sporebed","dewcatcher","den"],
+    units:["sporeling","capthrow","convert"],
+    power:{id:"hearthburst",name:"Hearthburst",cd:16,desc:"Ember wave. Nearby foes burn."},
+    plus:"Glowcap burns hotter. Wilds runs seed bloom.",
+    minus:"Dew dries fast. Cold lands blunt your step.",
+    tick:(S,dt)=>{ S.res.dew=clamp(S.res.dew-0.08*dt,0,S.cap.dew); },
+    wilds:(U)=>{ U.atk*=1.08; }
+  },
+  cairn:{
+    id:"cairn", region:"ribs", name:"Cairn-Kin", color:"#e8d7b0",
+    chief:"Thane Kerr", names:["Bone","Cairn"],
+    buildings:["hearth","ossuary","ribkiln","den","watchgate","altar","barracks"],
+    start:["watchgate","hearth","ossuary","ribkiln","den","empty"],
+    units:["boneguard","ossward","sporeling"],
+    power:{id:"bonewall",name:"Bone Wall",cd:18,desc:"A rib shell. Brief fat health."},
+    plus:"Bone and grit. Wards soak hits.",
+    minus:"Slow bodies. Food goes farther to fill them.",
+    tick:(S,dt)=>{ S.res.food=clamp(S.res.food-0.12*dt,0,S.cap.food); },
+    wilds:(U)=>{ U.hp*=1.25; U.speed*=0.86; }
+  },
+  gills:{
+    id:"gills", region:"dewfen", name:"Dewfen Gills", color:"#6ec8ff",
+    chief:"Tide-Mother Ivy", names:["Gill","Dew"],
+    buildings:["hearth","gillpool","mistbed","dewcatcher","den","nursery","altar"],
+    start:["watchgate","hearth","gillpool","mistbed","dewcatcher","den"],
+    units:["gilldiver","veinwalker","capthrow"],
+    power:{id:"mistveil",name:"Mist Veil",cd:14,desc:"A breath of fog. Brief invuln."},
+    plus:"Dew and healing. Humid lands love you.",
+    minus:"Ember sputters. Heat lands drink you dry.",
+    tick:(S,dt)=>{ S.res.ember=clamp(S.res.ember-0.1*dt,0,S.cap.ember); if(G.player&&G.player.hp<UNITS[G.player.form].hp) G.player.hp+=4*dt; },
+    wilds:(U)=>{ U.hp*=1.1; }
+  },
+  crows:{
+    id:"crows", region:"crow", name:"Crow Pass Kin", color:"#c9a6ff",
+    chief:"Rook of the Pass", names:["Crow","Quill"],
+    buildings:["hearth","roost","beacon","dewcatcher","den","watchgate"],
+    start:["beacon","hearth","roost","dewcatcher","den","empty"],
+    units:["crowkin","seerspark","veinwalker"],
+    power:{id:"blackwing",name:"Black Wing",cd:12,desc:"A lift. Jump again in the air."},
+    plus:"Fast, high sight. Beacons watch far.",
+    minus:"Thin blood. Food stores stay small.",
+    tick:(S)=>{ S.cap.food=Math.min(S.cap.food,70); },
+    wilds:(U)=>{ U.speed*=1.18; U.hp*=0.82; }
+  },
+  tide:{
+    id:"tide", region:"coast", name:"Bone-Coast Tidecallers", color:"#6ec8ff",
+    chief:"Salt-Voice Sable", names:["Tide","Salt"],
+    buildings:["hearth","tideshrine","saltbed","dewcatcher","den","altar","watchgate"],
+    start:["watchgate","hearth","tideshrine","saltbed","dewcatcher","den"],
+    units:["tidepriest","capthrow","gilldiver"],
+    power:{id:"tidepull",name:"Tide Pull",cd:20,desc:"Pull tribute and a breath of spirit."},
+    plus:"Tribute walks home. Spirit wells.",
+    minus:"Sealed roads starve you twice.",
+    tick:(S,dt)=>{ const w=worldStats(); S.res.spirit=clamp(S.res.spirit+w.inf/24000*dt,0,S.cap.spirit); },
+    wilds:(U)=>{ U.atk*=1.05; }
+  },
+  raiders:{
+    id:"raiders", region:"ember", name:"Ember Waste Raiders", color:"#ff6a2a",
+    chief:"Ash-Raider Vex", names:["Waste","Slag"],
+    buildings:["hearth","slagpit","warden","watchgate","barracks","glowcap"],
+    start:["watchgate","hearth","slagpit","warden","glowcap","empty"],
+    units:["slagraider","convert","capthrow"],
+    power:{id:"scorch",name:"Scorch",cd:10,desc:"Next swings hit like slag."},
+    plus:"Hard hits. Heat is home.",
+    minus:"Joy burns out. Dew never lasts.",
+    tick:(S,dt)=>{ S.happiness=Math.max(8,S.happiness-0.08*dt); S.res.dew=clamp(S.res.dew-0.14*dt,0,S.cap.dew); },
+    wilds:(U)=>{ U.atk*=1.22; }
+  },
+  night:{
+    id:"night", region:"night", name:"Nightwood Seers", color:"#7dff9a",
+    chief:"Lumen-in-Shade", names:["Shade","Night"],
+    buildings:["hearth","hushaltar","shadowden","dewcatcher","altar","nursery"],
+    start:["watchgate","hearth","hushaltar","shadowden","dewcatcher","empty"],
+    units:["nightstalk","seerspark","veinwalker"],
+    power:{id:"fogstep",name:"Fog Step",cd:15,desc:"Step through a foe. Brief stealth."},
+    plus:"Spirit and stealth. The rival rite sees you late.",
+    minus:"Pits of ember sit cold. Brawn work lags.",
+    tick:(S)=>{ if(S.bloom) S.bloom.stealth=Math.max(S.bloom.stealth,1); },
+    wilds:(U)=>{ U.speed*=1.1; U.atk*=1.06; }
+  },
+  mouth:{
+    id:"mouth", region:"mouth", name:"Mouth Cult", color:"#c44536",
+    chief:"Speaker of the Maw", names:["Maw","Old"],
+    buildings:["hearth","mawpit","oldaltar","den","nursery","barracks"],
+    start:["watchgate","hearth","mawpit","oldaltar","den","empty"],
+    units:["mouthspawn","convert","seerspark"],
+    power:{id:"silencerite",name:"Silence Rite",cd:22,desc:"Push the rival rite backward."},
+    plus:"DNA drips. The Maw feeds bone.",
+    minus:"The hold is unhappy. Rival rites wake early.",
+    tick:(S,dt)=>{ S.happiness=Math.max(6,S.happiness-0.1*dt); if(S.bloom) S.bloom.dna+=0.015*dt; },
+    wilds:(U)=>{ U.atk*=1.1; U.hp*=1.1; }
+  }
+};
+function fac(){ return FACTIONS[S && S.faction] || FACTIONS.ashborn; }
+function regionFaction(id){
+  const hit=Object.values(FACTIONS).find(f=>f.region===id);
+  return hit||FACTIONS.ashborn;
+}
 
 const $ = id => document.getElementById(id);
 const rnd = (a,b)=> a+Math.floor(Math.random()*(b-a+1));
@@ -216,8 +341,9 @@ function blankBloom(){
     evolved:[],lands,veins,caravans:[],cure:0,cureOn:false,news:"A cough in Ashen Glen. The hearth tastes of cap and ash.",won:null};
 }
 function newDweller(role, forced={}){
+  const house = (S && fac().names) || ["Ashborn","Sporekin"];
   const d={id:"d"+Date.now().toString(36)+rnd(10,99),
-    name:pick(NAMES)+" "+pick(["Ashborn","Sporekin","Emberfell","Wilds","Bone"]),
+    name:pick(NAMES)+" "+pick(house),
     role:role||pick(["hunter","gatherer","seer","guard"]),
     brawn:rnd(1,4),sight:rnd(1,4),grit:rnd(1,4),voice:rnd(1,4),craft:rnd(1,4),
     hp:100,happy:70,room:null,xp:0,faceSeed:null};
@@ -225,26 +351,29 @@ function newDweller(role, forced={}){
   if(!d.portrait) d.faceSeed=d.faceSeed||d.id;
   return d;
 }
-function blankHold(){
+function blankHold(fid){
+  const F = FACTIONS[fid] || FACTIONS.ashborn;
   const dwellers=[
-    newDweller("chief",{name:"Chief Ashborn",portrait:"art/chief.jpg",brawn:4,sight:3,grit:5,voice:6,craft:3,happy:80}),
-    newDweller("hunter",{name:"Thorn Wilds",portrait:"art/thorn.jpg",brawn:3,grit:5,sight:4}),
-    newDweller("gatherer",{name:"Moss Sporekin",portrait:"art/moss.jpg",craft:5,voice:3}),
-    newDweller("seer",{name:"Lumen Emberfell",portrait:"art/lumen.jpg",voice:5,sight:4}),
+    newDweller("chief",{name:F.chief, portrait: F.id==="ashborn"?"art/chief.jpg":undefined, brawn:4,sight:3,grit:5,voice:6,craft:3,happy:80}),
+    newDweller("hunter",{name: F.id==="ashborn"?"Thorn Wilds":pick(NAMES)+" "+F.names[0], portrait:F.id==="ashborn"?"art/thorn.jpg":undefined, brawn:3,grit:5,sight:4}),
+    newDweller("gatherer",{name: F.id==="ashborn"?"Moss Sporekin":pick(NAMES)+" "+F.names[1], portrait:F.id==="ashborn"?"art/moss.jpg":undefined, craft:5,voice:3}),
+    newDweller("seer",{name: F.id==="ashborn"?"Lumen Emberfell":pick(NAMES)+" "+F.names[0], portrait:F.id==="ashborn"?"art/lumen.jpg":undefined, voice:5,sight:4}),
   ];
+  const types = F.start.slice();
+  while(types.length<6) types.push("empty");
   const floors=[
     {id:0,kind:"gate",locked:false,slots:[
-      {id:"g0",type:"watchgate",lv:1,workers:[],ready:0},
-      {id:"g1",type:"hearth",lv:1,workers:[],ready:0},
+      {id:"g0",type:types[0],lv:1,workers:[],ready:0},
+      {id:"g1",type:types[1],lv:1,workers:[],ready:0},
       {id:"g2",type:"empty",lv:1,workers:[],ready:0},
     ]},
     {id:1,kind:"cave",locked:false,slots:[
-      {id:"a0",type:"glowcap",lv:1,workers:[],ready:0},
-      {id:"a1",type:"sporebed",lv:1,workers:[],ready:0},
-      {id:"a2",type:"dewcatcher",lv:1,workers:[],ready:0},
+      {id:"a0",type:types[2],lv:1,workers:[],ready:0},
+      {id:"a1",type:types[3],lv:1,workers:[],ready:0},
+      {id:"a2",type:types[4],lv:1,workers:[],ready:0},
     ]},
     {id:2,kind:"cave",locked:false,slots:[
-      {id:"b0",type:"den",lv:1,workers:[],ready:0},
+      {id:"b0",type:types[5],lv:1,workers:[],ready:0},
       {id:"b1",type:"empty",lv:1,workers:[],ready:0},
       {id:"b2",type:"empty",lv:1,workers:[],ready:0},
     ]},
@@ -258,9 +387,11 @@ function blankHold(){
   dwellers[1].room="g0"; floors[0].slots[0].workers=[dwellers[1].id];
   dwellers[2].room="a1"; floors[1].slots[1].workers=[dwellers[2].id];
   dwellers[3].room="a0"; floors[1].slots[0].workers=[dwellers[3].id];
-  return {day:1,t:0,res:{ember:48,food:52,dew:50,spirit:12,bone:80},
+  const bloom=blankBloom();
+  if(F.region!=="glen") bloom.lands[F.region].inf=Math.max(bloom.lands[F.region].inf,50);
+  return {day:1,t:0,faction:F.id,res:{ember:48,food:52,dew:50,spirit:12,bone:80},
     cap:{ember:90,food:90,dew:90,spirit:40},happiness:72,dwellers,floors,
-    log:["The hearth catches."],warsWon:0,bloom:blankBloom(),form:"sporeling"};
+    log:[F.name+" lights a hold."],warsWon:0,bloom,form:F.units[0],powerCd:0};
 }
 
 let S=null, raf=0, mode="hold", near=null, keys={ax:0,ay:0,j:false,climb:0};
@@ -275,7 +406,7 @@ function unitImg(k){ return IMG["art/units/"+(UNITS[k]||UNITS.sporeling).file+".
 
 function allRooms(){ const o=[]; S.floors.forEach(f=>f.slots.forEach(r=>o.push({floor:f,room:r}))); return o; }
 function roomById(id){ for(const f of S.floors) for(const r of f.slots) if(r.id===id) return r; return null; }
-function popCap(){ let n=6; allRooms().forEach(({room})=>{ if(room.type==="den") n+=4*room.lv; }); return n; }
+function popCap(){ let n=6; allRooms().forEach(({room})=>{ const def=ROOM_DEFS[room.type]; if(def&&def.pop) n+=def.pop*room.lv; }); return n; }
 function idleDwellers(){ return S.dwellers.filter(d=>!d.room); }
 function worldStats(){
   let pop=0,inf=0,dead=0;
@@ -295,6 +426,8 @@ function load(){
     if(!s.bloom) s.bloom = s.plague || blankBloom();
     if(s.bloom && !s.bloom.veins) s.bloom.veins=blankBloom().veins;
     if(!s.form) s.form="sporeling";
+    if(!s.faction) s.faction="ashborn";
+    if(s.powerCd==null) s.powerCd=0;
     return s;
   }catch(e){ return null; }
 }
@@ -316,6 +449,9 @@ function consumeAndProduce(dt){
     const bonus=wr.reduce((a,d)=>a+(d[stat]||1),0);
     room.ready=Math.min(20,(room.ready||0)+(def.base*room.lv*(0.35+bonus*0.12))*dt*0.12);
   });
+  const F=fac();
+  if(F.tick) F.tick(S,dt);
+  if(S.powerCd>0) S.powerCd=Math.max(0,S.powerCd-dt);
 }
 
 function climateMul(c,P){
@@ -348,7 +484,7 @@ function tickBloom(dt){
     const d=newDweller("converted"); S.dwellers.push(d); pushLog(d.name+" walks in already blooming.");
   }
   const w=worldStats(); const infPct=w.inf/Math.max(1,w.pop-w.dead);
-  if(!P.cureOn && P.sev>=6 && infPct>0.08){ P.cureOn=true; P.news="Shamans of the Mouth begin a rival rite."; toast("A rival rite has begun."); }
+  if(!P.cureOn && ((S.faction==="mouth" && P.sev>=4) || P.sev>=6) && infPct>0.08){ P.cureOn=true; P.news="Shamans of the Mouth begin a rival rite."; toast("A rival rite has begun."); }
   if(P.cureOn && !P.won){
     P.cure=Math.min(100,P.cure+Math.max(0.08,(P.sev*0.35+infPct*4)-P.stealth*0.7)*dt*0.12);
     if(P.cure>=100){ P.won="cure"; P.news="The rival rite burns the bloom back."; showBloomEnd(false); }
@@ -450,7 +586,7 @@ function buildWilds(regionId){
   });
   plats.push(rect(x, ground-8, W-x, 20, "walk"));
   const actors=[];
-  const kinds=Object.keys(UNITS);
+  const kinds=regionFaction(regionId).units;
   const landPlats=plats.filter(p=>p.tag==="plat");
   for(let i=0;i<Math.min(9,landPlats.length);i+=1){
     if(rng()>0.55){
@@ -461,7 +597,11 @@ function buildWilds(regionId){
   G.W=W; G.H=1080; G.plats=plats; G.actors=actors;
   G.goal=rect(W-160,ground-8,90,90,"shrine");
   G.region=regionId;
-  G.player={x:60,y:ground-8,vx:0,vy:0,w:28,h:52,on:false,facing:1,hp:UNITS[S.form].hp,form:S.form,inv:0};
+  G.player={x:60,y:ground-8,vx:0,vy:0,w:28,h:52,on:false,facing:1,form:S.form,inv:0,buff:null};
+  const base=UNITS[S.form];
+  G.player.speed=base.speed; G.player.atk=base.atk; G.player.hp=base.hp;
+  const F=fac();
+  if(F.wilds) F.wilds(G.player);
 }
 
 function aabb(a,b){ return a.x < b.x+b.w && a.x+a.w > b.x && a.y-a.h < b.y && a.y > b.y-b.h; }
@@ -471,10 +611,11 @@ function standingOn(p, plat){
 
 function stepPhys(p, dt){
   const U=UNITS[p.form]||UNITS.sporeling;
-  const ax = keys.ax || (keys.l?-1:keys.r?1:0);
+  const spd = p.speed || U.speed;
+  const ax = keys.ax || 0;
   const ay = keys.ay || 0;
   const mag = Math.min(1, Math.hypot(ax, ay));
-  p.vx = ax * U.speed * Math.max(mag, Math.abs(ax)>0.12?1:0);
+  p.vx = ax * spd * Math.max(mag, Math.abs(ax)>0.12?1:0);
   if(Math.abs(ax)>0.18) p.facing = ax<0?-1:1;
   if((keys.j || ay<-0.78) && p.on){ p.vy=-640; p.on=false; keys.j=false; }
   p.vy += 1850*dt;
@@ -533,6 +674,26 @@ function stepWorld(dt){
   G.cam.y = clamp(p.y - innerHeight*0.62, 0, G.H-innerHeight);
 }
 
+function usePower(){
+  if(!S || !G.player) return;
+  const F=fac();
+  if(S.powerCd>0) return toast(F.power.name+" rests "+Math.ceil(S.powerCd)+"s");
+  S.powerCd=F.power.cd;
+  const p=G.player;
+  const id=F.power.id;
+  if(id==="hearthburst"){
+    G.actors.forEach(a=>{ if(a.kind==="foe" && Math.abs(a.x-p.x)<140){ a.hp-=22; a.x+=p.facing*40; }});
+    G.actors=G.actors.filter(a=>a.kind!=="foe"||a.hp>0);
+    toast("Hearthburst.");
+  } else if(id==="bonewall"){ p.hp+=55; p.inv=1.2; toast("Ribs close."); }
+  else if(id==="mistveil"){ p.inv=2.2; toast("Mist takes you."); }
+  else if(id==="blackwing"){ p.vy=-780; p.on=false; toast("Black wing."); }
+  else if(id==="tidepull"){ S.res.spirit=clamp(S.res.spirit+6,0,S.cap.spirit); S.res.food=clamp(S.res.food+8,0,S.cap.food); toast("The tide pays."); }
+  else if(id==="scorch"){ p.buff="scorch"; setTimeout(()=>{ if(G.player) G.player.buff=null; },5000); toast("Slag on the blade."); }
+  else if(id==="fogstep"){ p.x+=p.facing*120; p.inv=1.4; toast("Fog step."); }
+  else if(id==="silencerite"){ if(S.bloom.cureOn) S.bloom.cure=Math.max(0,S.bloom.cure-18); toast("The rival rite stutters."); }
+}
+
 function doAct(){
   if(!near){
     if(mode==="wilds") swing();
@@ -547,9 +708,10 @@ function doAct(){
 function swing(){
   const p=G.player; const U=UNITS[p.form];
   const box={x:p.facing>0?p.x+p.w:p.x-36,y:p.y,w:36,h:p.h};
+  const atk=(p.atk||U.atk) * (p.buff==="scorch"?1.8:1);
   G.actors.forEach(a=>{
     if(a.kind!=="foe"||a.hp<=0) return;
-    if(aabb(box,{x:a.x,y:a.y,w:28,h:50})){ a.hp-=U.atk; a.x+=p.facing*30; }
+    if(aabb(box,{x:a.x,y:a.y,w:28,h:50})){ a.hp-=atk; a.x+=p.facing*30; }
   });
   G.actors=G.actors.filter(a=>a.kind!=="foe"||a.hp>0);
 }
@@ -662,7 +824,7 @@ function renderHud(){
     <div class="res">DW <div class="bar"><i style="width:${S.res.dew/S.cap.dew*100}%;background:var(--dew)"></i></div>${Math.floor(S.res.dew)}</div>
     <div class="res">SP <div class="bar"><i style="width:${S.res.spirit/S.cap.spirit*100}%;background:var(--spirit)"></i></div>${Math.floor(S.res.spirit)}</div>
     <div class="res">🦴 ${Math.floor(S.res.bone)} · 😊 ${Math.floor(S.happiness)}</div>
-    <div class="res">🧬 ${Math.floor(S.bloom.dna)} · bloom ${inf}% · D${S.day}</div>`;
+    <div class="res">🧬 ${Math.floor(S.bloom.dna)} · ${fac().name.split(" ")[0]} · D${S.day}</div>`;
 }
 
 function tick(){
@@ -679,8 +841,9 @@ function openRoom(room){
   const wr=room.workers.map(id=>S.dwellers.find(d=>d.id===id)).filter(Boolean);
   const el=$("sheet"); el.classList.add("on");
   if(room.type==="empty"){
-    el.innerHTML=`<h2>HOLLOW</h2>${Object.keys(ROOM_DEFS).filter(k=>k!=="empty"&&k!=="hearth").map(k=>{
-      const d=ROOM_DEFS[k]; const cost=Object.entries(d.cost||{}).map(([a,b])=>b+" "+a).join(" · ");
+    el.innerHTML=`<h2>HOLLOW · ${fac().name}</h2>${fac().buildings.filter(k=>k!=="hearth").map(k=>{
+      const d=ROOM_DEFS[k]; if(!d) return "";
+      const cost=Object.entries(d.cost||{}).map(([a,b])=>b+" "+a).join(" · ");
       return `<div class="row"><div><b>${d.name}</b><small> ${cost}</small></div><button class="mini hot" data-b="${k}">RAISE</button></div>`;
     }).join("")}<button class="mini" style="width:100%" id="x">CLOSE</button>`;
     el.querySelectorAll("[data-b]").forEach(b=>b.onclick=()=>{
@@ -711,11 +874,16 @@ function openRoom(room){
 
 function openWildsPick(){
   const el=$("sheet"); el.classList.add("on");
-  el.innerHTML=`<h2>WEAR A BODY · WALK THE WILDS</h2>
-    ${Object.keys(UNITS).map(k=>`<div class="row"><div><b>${UNITS[k].name}</b><small>spd ${UNITS[k].speed} · atk ${UNITS[k].atk}</small></div>
+  const F=fac();
+  el.innerHTML=`<h2>${F.name.toUpperCase()} · WEAR A BODY</h2>
+    <p style="font-size:12px;color:#cbb89a">${F.plus}<br>${F.minus}</p>
+    ${F.units.map(k=>`<div class="row"><div><b>${UNITS[k].name}</b><small>spd ${UNITS[k].speed} · atk ${UNITS[k].atk} · hp ${UNITS[k].hp}</small></div>
       <button class="mini hot" data-f="${k}">WEAR</button></div>`).join("")}
-    ${REGIONS.map(r=>`<div class="row"><div><b>${r.name}</b><small>bloom ${Math.floor(regionPct(r.id)*100)}%</small></div>
-      <button class="mini hot" data-r="${r.id}">RUN</button></div>`).join("")}
+    ${REGIONS.map(r=>{
+      const rf=regionFaction(r.id);
+      return `<div class="row"><div><b>${r.name}</b><small>${rf.name} · bloom ${Math.floor(regionPct(r.id)*100)}%</small></div>
+      <button class="mini hot" data-r="${r.id}">RUN</button></div>`;
+    }).join("")}
     <button class="mini" style="width:100%" id="x">CLOSE</button>`;
   el.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{ S.form=b.dataset.f; toast("Wearing "+UNITS[S.form].name); G.player.form=S.form; });
   el.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{
@@ -820,7 +988,7 @@ function bindPads(){
   let pid=null;
   function onDown(e){
     if($("sheet").classList.contains("on") || $("modal").classList.contains("on")) return;
-    if(e.target.closest && (e.target.closest("#btnAct")||e.target.closest("#btnJ")||e.target.closest(".sheet")||e.target.closest("#modal"))) return;
+    if(e.target.closest && (e.target.closest("#btnAct")||e.target.closest("#btnJ")||e.target.closest("#btnPow")||e.target.closest(".sheet")||e.target.closest("#modal"))) return;
     if(e.clientX > innerWidth*0.58 && e.target!==stick && !stick.contains(e.target)) return;
     pid=e.pointerId; stick.setPointerCapture?.(pid);
     const b=stick.getBoundingClientRect();
@@ -840,6 +1008,7 @@ function bindPads(){
   $("btnJ").addEventListener("pointerdown",e=>{ e.preventDefault(); e.stopPropagation(); keys.j=true; });
   $("btnJ").addEventListener("pointerup",()=>keys.j=false);
   $("btnAct").addEventListener("pointerdown",e=>{ e.preventDefault(); e.stopPropagation(); doAct(); });
+  $("btnPow").addEventListener("pointerdown",e=>{ e.preventDefault(); e.stopPropagation(); usePower(); });
   window.addEventListener("keydown",e=>{
     if(e.key==="ArrowLeft"||e.key==="a") keys.ax=-1;
     if(e.key==="ArrowRight"||e.key==="d") keys.ax=1;
@@ -847,6 +1016,7 @@ function bindPads(){
     if(e.key==="ArrowDown"||e.key==="s") keys.ay=1;
     if(e.key===" ") keys.j=true;
     if(e.key==="e"||e.key==="Enter") doAct();
+    if(e.key==="q") usePower();
   });
   window.addEventListener("keyup",e=>{
     if(e.key==="ArrowLeft"||e.key==="a") keys.ax=Math.max(0,keys.ax);
@@ -861,17 +1031,27 @@ function sizeCanvas(){
   const c=$("stage"); const dpr=devicePixelRatio||1;
   c.width=innerWidth*dpr; c.height=innerHeight*dpr;
 }
-function startGame(fresh){
-  S = fresh ? blankHold() : (load()||blankHold());
+function pickTribeThenStart(){
+  $("modal").className="on";
+  $("modal").innerHTML=`<div class="card"><h2>CHOOSE YOUR TRIBE</h2>
+    ${Object.values(FACTIONS).map(f=>`<div class="row"><div><b style="color:${f.color}">${f.name}</b>
+      <small>${f.plus} · ${f.minus}<br>Power: ${f.power.name}. Units: ${f.units.map(u=>UNITS[u].name).join(", ")}</small></div>
+      <button class="mini hot" data-f="${f.id}">CLAIM</button></div>`).join("")}
+    </div>`;
+  $("modal").querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{ $("modal").className=""; startGame(true, b.dataset.f); });
+}
+function startGame(fresh, fid){
+  S = fresh ? blankHold(fid||"ashborn") : (load()||blankHold("ashborn"));
   $("title").classList.remove("on"); $("play").classList.add("on");
   mode="hold"; sizeCanvas(); buildHoldLevel(); renderHud();
   cancelAnimationFrame(raf); requestAnimationFrame(loop);
   clearInterval(startGame._t); startGame._t=setInterval(tick,1000);
   if(fresh){
+    const F=fac();
     $("modal").className="on";
-    $("modal").innerHTML=`<div class="card"><h2>THE FIRST NIGHT</h2>
-      <p>Left thumb is the stick — drag to walk, tilt up the shaft to climb, flick up to jump. Right thumb: JUMP and ACT.</p>
-      <p>Stand on a room to post hands or take stores. Gate runs the wilds. Altar tends the bloom.</p>
+    $("modal").innerHTML=`<div class="card"><h2>${F.name.toUpperCase()}</h2>
+      <p>${F.plus}</p><p>${F.minus}</p>
+      <p>POW is ${F.power.name}. Stick walks. JUMP / ACT on the right.</p>
       <button class="bigbtn" id="ok">I HEAR THE HEARTH</button></div>`;
     $("ok").onclick=()=>$("modal").className="";
   }
@@ -879,7 +1059,7 @@ function startGame(fresh){
 
 window.addEventListener("resize",sizeCanvas);
 bindPads();
-$("btnNew").onclick=()=>startGame(true);
+$("btnNew").onclick=()=>pickTribeThenStart();
 $("btnCont").onclick=()=>startGame(false);
 if(load()) $("btnCont").style.display="block";
 </script>

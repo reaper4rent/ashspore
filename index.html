@@ -46,20 +46,31 @@
     .bar { flex:1; height:6px; background:#2a1b14; border-radius:4px; overflow:hidden; }
     .bar i { display:block; height:100%; background:var(--ember); }
     #prompt {
-      position:absolute; left:50%; bottom:132px; transform:translateX(-50%);
+      position:absolute; left:50%; bottom:168px; transform:translateX(-50%);
       z-index:6; display:none; padding:8px 14px; border-radius:12px;
       background:#1a100cee; border:1px solid #ffb347; font-size:12px; letter-spacing:.08em;
+      pointer-events:none; white-space:nowrap;
     }
     #pads {
       position:absolute; left:0; right:0; bottom:0; z-index:7;
-      padding: 0 12px calc(10px + var(--safeb));
+      padding: 0 14px calc(12px + var(--safeb));
       display:flex; justify-content:space-between; align-items:flex-end; pointer-events:none;
     }
-    #pads button { pointer-events:auto; width:64px; height:64px; border-radius:50%;
-      border:1px solid #5a4030; background:#1a100ccc; color:var(--bone); font-weight:800; font-size:18px; }
-    #pads .jump { width:74px; height:74px; background:#ff6a2acc; color:#2a0d04; border:0; }
-    #pads .act { background:#7dff9a22; color:var(--spore); }
-    #pads .row { display:flex; gap:8px; }
+    #stick {
+      pointer-events:auto; width:132px; height:132px; border-radius:50%;
+      background:radial-gradient(circle at 50% 50%, #2a1b1488, #0b0706cc);
+      border:2px solid #5a403099; position:relative; touch-action:none;
+    }
+    #knob {
+      position:absolute; left:50%; top:50%; width:58px; height:58px; margin:-29px 0 0 -29px;
+      border-radius:50%; background:radial-gradient(circle at 35% 30%, #ffb347, #d44512);
+      box-shadow:0 4px 0 #6a1c08; pointer-events:none;
+    }
+    #pads .row { display:flex; gap:12px; pointer-events:auto; align-items:flex-end; }
+    #pads button { width:68px; height:68px; border-radius:50%;
+      border:1px solid #5a4030; background:#1a100ccc; color:var(--bone); font-weight:800; font-size:13px; letter-spacing:.06em; }
+    #pads .jump { width:78px; height:78px; background:#ff6a2acc; color:#2a0d04; border:0; }
+    #pads .act { background:#7dff9a33; color:var(--spore); }
     .sheet {
       position:absolute; left:0; right:0; bottom:0; max-height:62%; overflow:auto; z-index:12;
       background:#140e0c; border-top:2px solid #3a261c; padding:14px 14px 28px;
@@ -107,10 +118,7 @@
       <div id="hud"></div>
       <div id="prompt"></div>
       <div id="pads">
-        <div class="row">
-          <button id="btnL">◀</button>
-          <button id="btnR">▶</button>
-        </div>
+        <div id="stick"><div id="knob"></div></div>
         <div class="row">
           <button class="act" id="btnAct">ACT</button>
           <button class="jump" id="btnJ">JUMP</button>
@@ -255,7 +263,7 @@ function blankHold(){
     log:["The hearth catches."],warsWon:0,bloom:blankBloom(),form:"sporeling"};
 }
 
-let S=null, raf=0, mode="hold", near=null, keys={};
+let S=null, raf=0, mode="hold", near=null, keys={ax:0,ay:0,j:false,climb:0};
 const G={player:null,plats:[],actors:[],cam:{x:0,y:0},W:1600,H:900,goal:null,region:"glen"};
 
 const IMG={};
@@ -363,43 +371,97 @@ function showBloomEnd(win){
 
 /* ---------- 2.5D platformer ---------- */
 function rect(x,y,w,h,tag,meta){ return {x,y,w,h,tag:tag||"plat",meta:meta||null}; }
+function stairs(plats, x, y, dir, steps, rise, run){
+  for(let i=0;i<steps;i++){
+    plats.push(rect(x + i*run*dir, y - i*rise, run+8, 14, "plat"));
+  }
+}
 function buildHoldLevel(){
   const plats=[], actors=[];
-  const W=1680, floorH=150, ground=820;
-  plats.push(rect(0,ground,W,80,"floor"));
-  plats.push(rect(780,120,70,ground-120,"ladder"));
+  const W=2100, ground=980;
+  plats.push(rect(-40,ground,W+80,120,"floor"));
+  // main walkway
+  plats.push(rect(40, ground-8, 2020, 24, "walk"));
+  // shaft
+  plats.push(rect(980, 280, 56, ground-280, "ladder"));
+  const floorY = [ground-8, 820, 660, 500];
   S.floors.forEach((f,fi)=>{
-    const y = ground - 8 - fi*floorH;
-    if(f.locked) return;
+    const y = floorY[fi] || (ground-8-fi*160);
+    if(f.locked){
+      plats.push(rect(1080, y, 200, 18, "plat"));
+      return;
+    }
+    const xs = fi%2===0 ? [80, 430, 1280] : [160, 560, 1360];
     f.slots.forEach((room,si)=>{
-      const x = 80 + si*420;
-      plats.push(rect(x,y,360,22,"room",{room,floor:f}));
+      const x = xs[si];
+      plats.push(rect(x, y, 300, 20, "room", {room,floor:f}));
+      plats.push(rect(x+8, y-70, 284, 70, "alcove", {room}));
       const wr=room.workers.map(id=>S.dwellers.find(d=>d.id===id)).filter(Boolean);
-      wr.forEach((d,i)=> actors.push({kind:"npc",d,x:x+70+i*70,y:y,facing:1,form:d.role==="chief"?"boneguard":"sporeling"}));
+      wr.forEach((d,i)=> actors.push({kind:"npc",d,x:x+60+i*70,y:y,facing:1,form:d.role==="chief"?"boneguard":"sporeling"}));
     });
+    if(fi<floorY.length-1 && !S.floors[fi+1].locked){
+      const up = floorY[fi+1];
+      stairs(plats, 920, y, -1, 6, Math.round((y-up)/6), 28);
+      stairs(plats, 1060, y, 1, 6, Math.round((y-up)/6), 28);
+    }
   });
-  plats.push(rect(40,ground-8,90,90,"gate"));
-  plats.push(rect(W-160,ground-8,90,90,"altar"));
-  G.W=W; G.H=960; G.plats=plats; G.actors=actors; G.goal=null;
+  // flavor ledges
+  plats.push(rect(700, 880, 120, 14, "plat"));
+  plats.push(rect(860, 740, 90, 14, "plat"));
+  plats.push(rect(1180, 740, 90, 14, "plat"));
+  plats.push(rect(40, ground-8, 110, 96, "gate"));
+  plats.push(rect(W-180, ground-8, 110, 96, "altar"));
+  G.W=W; G.H=1140; G.plats=plats; G.actors=actors; G.goal=null;
   G.player={x:520,y:ground-8,vx:0,vy:0,w:28,h:52,on:false,facing:1,hp:100,form:S.form||"sporeling",inv:0};
 }
 
 function buildWilds(regionId){
+  const r = REGIONS.find(x=>x.id===regionId) || REGIONS[0];
   const rng=mulberry(hash32(regionId+":"+S.day+":"+S.warsWon));
-  const W=3200, ground=780;
-  const plats=[rect(0,ground,W,90,"floor")];
-  for(let i=0;i<18;i++){
-    const x=180+i*160+rng()*40, y=ground-80-Math.floor(rng()*4)*70, w=90+rng()*80;
-    plats.push(rect(x,y,w,18,"plat"));
-  }
+  const W=3600, ground=900;
+  const plats=[rect(-20,ground,W+40,140,"floor"), rect(0,ground-8,280,20,"walk")];
+  const climate=r.climate;
+  const rise = climate==="cold"?78: climate==="hot"?54:64;
+  let x=280, y=ground-8;
+  // authored beats: run, stair, gap, balcony, drop, shrine terrace
+  const beats = [
+    {type:"run", n:3}, {type:"up", n:4}, {type:"gap", n:1},
+    {type:"run", n:2}, {type:"down", n:3}, {type:"island", n:3},
+    {type:"up", n:5}, {type:"run", n:2}, {type:"gap", n:1}, {type:"run", n:2}
+  ];
+  beats.forEach(beat=>{
+    if(beat.type==="run"){
+      const w=160+rng()*80;
+      for(let i=0;i<beat.n;i++){ plats.push(rect(x,y,w,18,"plat")); x+=w-12; }
+    } else if(beat.type==="up"){
+      for(let i=0;i<beat.n;i++){ y-=rise; plats.push(rect(x,y,110+rng()*30,16,"plat")); x+=100; }
+    } else if(beat.type==="down"){
+      for(let i=0;i<beat.n;i++){ y=Math.min(ground-8,y+rise); plats.push(rect(x,y,120,16,"plat")); x+=110; }
+    } else if(beat.type==="gap"){
+      x += 70+rng()*50;
+      plats.push(rect(x, y-40, 90, 16, "plat")); x+=140;
+    } else if(beat.type==="island"){
+      for(let i=0;i<beat.n;i++){
+        const iy = y - (i%2===0?0:rise);
+        plats.push(rect(x, iy, 100, 16, "plat"));
+        x+=130+rng()*30;
+      }
+    }
+  });
+  plats.push(rect(x, ground-8, W-x, 20, "walk"));
   const actors=[];
   const kinds=Object.keys(UNITS);
-  for(let i=0;i<8;i++){
-    actors.push({kind:"foe",form:kinds[Math.floor(rng()*kinds.length)],x:500+i*280,y:ground,facing:-1,hp:40+S.bloom.inf,patrol:500+i*280,inv:0});
+  const landPlats=plats.filter(p=>p.tag==="plat");
+  for(let i=0;i<Math.min(9,landPlats.length);i+=1){
+    if(rng()>0.55){
+      const p=landPlats[Math.floor(rng()*landPlats.length)];
+      actors.push({kind:"foe",form:kinds[Math.floor(rng()*kinds.length)],x:p.x+20,y:p.y,facing:-1,hp:36+S.bloom.inf*0.4,patrol:p.x+20,inv:0});
+    }
   }
-  G.W=W; G.H=920; G.plats=plats; G.actors=actors; G.goal=rect(W-140,ground-8,80,80,"shrine");
+  G.W=W; G.H=1080; G.plats=plats; G.actors=actors;
+  G.goal=rect(W-160,ground-8,90,90,"shrine");
   G.region=regionId;
-  G.player={x:80,y:ground-8,vx:0,vy:0,w:28,h:52,on:false,facing:1,hp:UNITS[S.form].hp,form:S.form,inv:0};
+  G.player={x:60,y:ground-8,vx:0,vy:0,w:28,h:52,on:false,facing:1,hp:UNITS[S.form].hp,form:S.form,inv:0};
 }
 
 function aabb(a,b){ return a.x < b.x+b.w && a.x+a.w > b.x && a.y-a.h < b.y && a.y > b.y-b.h; }
@@ -409,28 +471,34 @@ function standingOn(p, plat){
 
 function stepPhys(p, dt){
   const U=UNITS[p.form]||UNITS.sporeling;
-  const spd = U.speed;
-  p.vx = 0;
-  if(keys.l) { p.vx=-spd; p.facing=-1; }
-  if(keys.r) { p.vx=spd; p.facing=1; }
-  if(keys.j && p.on){ p.vy=-620; p.on=false; keys.j=false; }
-  p.vy += 1800*dt;
+  const ax = keys.ax || (keys.l?-1:keys.r?1:0);
+  const ay = keys.ay || 0;
+  const mag = Math.min(1, Math.hypot(ax, ay));
+  p.vx = ax * U.speed * Math.max(mag, Math.abs(ax)>0.12?1:0);
+  if(Math.abs(ax)>0.18) p.facing = ax<0?-1:1;
+  if((keys.j || ay<-0.78) && p.on){ p.vy=-640; p.on=false; keys.j=false; }
+  p.vy += 1850*dt;
   p.x += p.vx*dt;
   p.y += p.vy*dt;
   p.on=false;
+  let onLadder=false;
   G.plats.forEach(pl=>{
     if(pl.tag==="ladder"){
       if(p.x+p.w>pl.x && p.x<pl.x+pl.w && p.y>pl.y && p.y-p.h<pl.y+pl.h){
-        if(keys.j){ p.vy=-220; p.on=true; }
-        p.vy=Math.min(p.vy,80);
+        onLadder=true;
+        if(ay<-0.2 || keys.j){ p.vy=-240; p.on=true; }
+        else if(ay>0.25) p.vy=220;
+        else p.vy=Math.min(p.vy,40);
       }
       return;
     }
+    if(pl.tag==="alcove") return;
     if(standingOn(p,pl)){ p.y=pl.y; p.vy=0; p.on=true; }
   });
   p.x=clamp(p.x,8,G.W-36);
-  if(p.y>G.H){ p.y=780; p.vy=0; p.hp-=15; }
+  if(p.y>G.H){ p.y=900; p.vy=0; p.hp-=12; }
   if(p.inv>0) p.inv-=dt;
+  p.onLadder=onLadder;
 }
 
 function stepWorld(dt){
@@ -486,6 +554,28 @@ function swing(){
   G.actors=G.actors.filter(a=>a.kind!=="foe"||a.hp>0);
 }
 
+function drawLedge(ctx, pl){
+  const d=16;
+  const top = pl.tag==="room"?"#5a3a28": pl.tag==="floor"?"#241610":"#3a261c";
+  const face = pl.tag==="room"?"#2a1b14":"#1a100c";
+  ctx.fillStyle=face;
+  ctx.fillRect(pl.x, pl.y, pl.w, Math.max(pl.h, 18));
+  ctx.fillStyle=top;
+  ctx.beginPath();
+  ctx.moveTo(pl.x, pl.y);
+  ctx.lineTo(pl.x+d, pl.y-d*0.55);
+  ctx.lineTo(pl.x+pl.w+d, pl.y-d*0.55);
+  ctx.lineTo(pl.x+pl.w, pl.y);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle="#0006";
+  ctx.beginPath();
+  ctx.moveTo(pl.x+pl.w, pl.y);
+  ctx.lineTo(pl.x+pl.w+d, pl.y-d*0.55);
+  ctx.lineTo(pl.x+pl.w+d, pl.y+Math.max(pl.h,18)-d*0.25);
+  ctx.lineTo(pl.x+pl.w, pl.y+Math.max(pl.h,18));
+  ctx.closePath(); ctx.fill();
+}
+
 function drawBillboard(ctx, img, x, y, facing, form, enemy, t){
   const hover = (UNITS[form]||{}).hover ? Math.sin(t*5)*6 : 0;
   const bob = Math.sin(t*10)*2;
@@ -520,25 +610,28 @@ function draw(){
   }
   ctx.save();
   ctx.translate(-G.cam.x, -G.cam.y);
-  // depth floor
   G.plats.forEach(pl=>{
-    if(pl.tag==="ladder"){
-      ctx.fillStyle="#5a3a22"; ctx.fillRect(pl.x+20,pl.y,12,pl.h);
-      for(let y=pl.y;y<pl.y+pl.h;y+=22){ ctx.fillStyle="#c9a06a"; ctx.fillRect(pl.x+8,y,36,4); }
+    if(pl.tag==="alcove"){
+      ctx.fillStyle="#1a100ccc";
+      ctx.fillRect(pl.x, pl.y, pl.w, pl.h);
+      ctx.strokeStyle="#3a261c"; ctx.strokeRect(pl.x, pl.y, pl.w, pl.h);
       return;
     }
-    ctx.fillStyle = pl.tag==="room"?"#3a261c":"#2a1b14";
-    ctx.fillRect(pl.x, pl.y, pl.w, pl.h);
-    ctx.fillStyle="#1a100c";
-    ctx.beginPath(); ctx.moveTo(pl.x,pl.y); ctx.lineTo(pl.x+18,pl.y-10); ctx.lineTo(pl.x+pl.w+18,pl.y-10); ctx.lineTo(pl.x+pl.w,pl.y); ctx.fill();
+    if(pl.tag==="ladder"){
+      ctx.fillStyle="#4a2e1a"; ctx.fillRect(pl.x+18,pl.y,14,pl.h);
+      ctx.fillStyle="#c9a06a";
+      for(let y=pl.y;y<pl.y+pl.h;y+=20) ctx.fillRect(pl.x+6,y,38,5);
+      return;
+    }
+    drawLedge(ctx, pl);
     if(pl.tag==="room"){
       const def=ROOM_DEFS[pl.meta.room.type];
-      ctx.fillStyle="#e8d7b0"; ctx.font="12px sans-serif";
-      ctx.fillText((def&&def.name)||"Hollow", pl.x+12, pl.y-16);
-      if(pl.meta.room.ready>=8){ ctx.fillStyle="#ffb347"; ctx.fillText("READY", pl.x+pl.w-60, pl.y-16); }
+      ctx.fillStyle="#e8d7b0"; ctx.font="13px sans-serif";
+      ctx.fillText((def&&def.name)||"Hollow", pl.x+14, pl.y-16);
+      if(pl.meta.room.ready>=8){ ctx.fillStyle="#ffb347"; ctx.fillText("READY", pl.x+pl.w-64, pl.y-16); }
     }
-    if(pl.tag==="gate"){ ctx.fillStyle="#ff8a3d"; ctx.fillRect(pl.x+20,pl.y-70,50,70); ctx.fillStyle="#2a0d04"; ctx.fillText("WILDS",pl.x+24,pl.y-80); }
-    if(pl.tag==="altar"){ ctx.fillStyle="#7dff9a"; ctx.fillRect(pl.x+20,pl.y-40,50,40); ctx.fillStyle="#e8d7b0"; ctx.fillText("BLOOM",pl.x+22,pl.y-48); }
+    if(pl.tag==="gate"){ ctx.fillStyle="#ff8a3d"; ctx.fillRect(pl.x+24,pl.y-78,58,78); ctx.fillStyle="#2a0d04"; ctx.font="12px sans-serif"; ctx.fillText("WILDS",pl.x+28,pl.y-86); }
+    if(pl.tag==="altar"){ ctx.fillStyle="#7dff9a"; ctx.fillRect(pl.x+24,pl.y-48,58,48); ctx.fillStyle="#e8d7b0"; ctx.fillText("BLOOM",pl.x+28,pl.y-56); }
   });
   if(G.goal){ ctx.fillStyle="#c9a6ff"; ctx.fillRect(G.goal.x, G.goal.y-70, 70,70); ctx.fillStyle="#fff"; ctx.fillText("SHRINE",G.goal.x, G.goal.y-78); }
   const t=performance.now()/1000;
@@ -709,20 +802,58 @@ function startFog(){
 }
 
 function bindPads(){
-  const hold=(id,k,on)=>{ const el=$(id); const go=e=>{ e.preventDefault(); keys[k]=on; }; el.addEventListener("pointerdown",e=>go(e)||(keys[k]=true)); el.addEventListener("pointerup",()=>keys[k]=false); el.addEventListener("pointerleave",()=>keys[k]=false); };
-  hold("btnL","l",true); hold("btnR","r",true);
-  $("btnJ").addEventListener("pointerdown",e=>{ e.preventDefault(); keys.j=true; });
-  $("btnAct").addEventListener("pointerdown",e=>{ e.preventDefault(); doAct(); });
+  const stick=$("stick"), knob=$("knob");
+  const R=52;
+  function setStick(nx,ny){
+    const m=Math.hypot(nx,ny)||1;
+    const c=Math.min(1, m/R);
+    const x=(nx/m)*c*R, y=(ny/m)*c*R;
+    knob.style.transform=`translate(${x}px,${y}px)`;
+    const ax=x/R, ay=y/R;
+    keys.ax = Math.abs(ax)<0.18?0:ax;
+    keys.ay = Math.abs(ay)<0.18?0:ay;
+  }
+  function resetStick(){
+    knob.style.transform="translate(0,0)";
+    keys.ax=0; keys.ay=0;
+  }
+  let pid=null;
+  function onDown(e){
+    if($("sheet").classList.contains("on") || $("modal").classList.contains("on")) return;
+    if(e.target.closest && (e.target.closest("#btnAct")||e.target.closest("#btnJ")||e.target.closest(".sheet")||e.target.closest("#modal"))) return;
+    if(e.clientX > innerWidth*0.58 && e.target!==stick && !stick.contains(e.target)) return;
+    pid=e.pointerId; stick.setPointerCapture?.(pid);
+    const b=stick.getBoundingClientRect();
+    setStick(e.clientX-(b.left+b.width/2), e.clientY-(b.top+b.height/2));
+  }
+  function onMove(e){
+    if(pid==null || e.pointerId!==pid) return;
+    const b=stick.getBoundingClientRect();
+    setStick(e.clientX-(b.left+b.width/2), e.clientY-(b.top+b.height/2));
+  }
+  function onUp(e){ if(e.pointerId!==pid) return; pid=null; resetStick(); }
+  stick.addEventListener("pointerdown", onDown);
+  window.addEventListener("pointermove", onMove);
+  window.addEventListener("pointerup", onUp);
+  window.addEventListener("pointercancel", onUp);
+  $("play").addEventListener("pointerdown", onDown);
+  $("btnJ").addEventListener("pointerdown",e=>{ e.preventDefault(); e.stopPropagation(); keys.j=true; });
+  $("btnJ").addEventListener("pointerup",()=>keys.j=false);
+  $("btnAct").addEventListener("pointerdown",e=>{ e.preventDefault(); e.stopPropagation(); doAct(); });
   window.addEventListener("keydown",e=>{
-    if(e.key==="ArrowLeft"||e.key==="a") keys.l=true;
-    if(e.key==="ArrowRight"||e.key==="d") keys.r=true;
-    if(e.key==="ArrowUp"||e.key==="w"||e.key===" ") keys.j=true;
+    if(e.key==="ArrowLeft"||e.key==="a") keys.ax=-1;
+    if(e.key==="ArrowRight"||e.key==="d") keys.ax=1;
+    if(e.key==="ArrowUp"||e.key==="w") keys.ay=-1;
+    if(e.key==="ArrowDown"||e.key==="s") keys.ay=1;
+    if(e.key===" ") keys.j=true;
     if(e.key==="e"||e.key==="Enter") doAct();
   });
   window.addEventListener("keyup",e=>{
-    if(e.key==="ArrowLeft"||e.key==="a") keys.l=false;
-    if(e.key==="ArrowRight"||e.key==="d") keys.r=false;
-    if(e.key==="ArrowUp"||e.key==="w"||e.key===" ") keys.j=false;
+    if(e.key==="ArrowLeft"||e.key==="a") keys.ax=Math.max(0,keys.ax);
+    if(e.key==="ArrowRight"||e.key==="d") keys.ax=Math.min(0,keys.ax);
+    if(e.key==="ArrowUp"||e.key==="w") keys.ay=Math.max(0,keys.ay);
+    if(e.key==="ArrowDown"||e.key==="s") keys.ay=Math.min(0,keys.ay);
+    if(e.key===" ") keys.j=false;
   });
 }
 
@@ -739,8 +870,8 @@ function startGame(fresh){
   if(fresh){
     $("modal").className="on";
     $("modal").innerHTML=`<div class="card"><h2>THE FIRST NIGHT</h2>
-      <p>Walk the hold. Stand on a room and tap ACT to post hands or take stores. The shaft is a ladder — jump while touching it to climb.</p>
-      <p>The gate opens the wilds. Wear a body, run the caves, claim the shrine. The altar tends the bloom across the lands.</p>
+      <p>Left thumb is the stick — drag to walk, tilt up the shaft to climb, flick up to jump. Right thumb: JUMP and ACT.</p>
+      <p>Stand on a room to post hands or take stores. Gate runs the wilds. Altar tends the bloom.</p>
       <button class="bigbtn" id="ok">I HEAR THE HEARTH</button></div>`;
     $("ok").onclick=()=>$("modal").className="";
   }

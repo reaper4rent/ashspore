@@ -64,10 +64,24 @@
     }
     .face { overflow: hidden; padding: 0; }
     #worldwrap {
-      position: relative; height: 340px; background:
-        url("art/world.jpg") center / cover no-repeat;
+      position: relative; height: 360px; background: #0b0706;
       border: 1px solid #2a3a20; border-radius: 12px; margin: 8px 0 10px; overflow: hidden;
+      touch-action: none;
     }
+    #atlas {
+      position: absolute; inset: 0;
+      background: url("art/world.jpg") center / cover no-repeat;
+      transform-origin: 50% 50%;
+      transition: transform .35s ease;
+    }
+    #fog {
+      position: absolute; inset: 0; pointer-events: none; z-index: 2;
+    }
+    .unitbtn {
+      min-width: 44px; height: 40px; border-radius: 10px; border: 1px solid #4a3224;
+      background: #211610; color: var(--bone); font-size: 16px; font-weight: 800;
+    }
+    .unitbtn.on { background: var(--ember); color: #2a0d04; border: 0; }
     .region {
       position: absolute; width: 52px; height: 52px; border-radius: 50%;
       border: 2px solid #e8d7b0; background: #1a1810cc; display: flex;
@@ -290,11 +304,17 @@
     <section id="battle" class="screen">
       <canvas id="bcanvas"></canvas>
       <div id="bbar">
+        <button class="unitbtn on" data-u="sporeling" title="Sporeling">🍄</button>
+        <button class="unitbtn" data-u="boneguard" title="Bone Guard">🦴</button>
+        <button class="unitbtn" data-u="capthrow" title="Cap-Thrower">🎯</button>
+        <button class="unitbtn" data-u="veinwalker" title="Vein-Walker">〰️</button>
+        <button class="unitbtn" data-u="convert" title="Fervor Convert">🩸</button>
+        <button class="unitbtn" data-u="seerspark" title="Seer-Spark">✨</button>
         <button class="pct" data-p="25">25</button>
         <button class="pct on" data-p="50">50</button>
         <button class="pct" data-p="75">75</button>
         <button class="pct" data-p="100">100</button>
-        <div style="flex:1;font-size:12px;color:#cbb89a" id="bhint">Tap a hold, then a linked node.</div>
+        <div style="flex:1;font-size:11px;color:#cbb89a" id="bhint">Pick a unit, tap source, then a linked node.</div>
         <button class="dockbtn" id="btnFlee">FLEE</button>
       </div>
     </section>
@@ -360,6 +380,10 @@ function blankPlague(){
     lands[r.id] = { inf:0, dead:0, closed:false, aware:0 };
   });
   lands.glen.inf = 40; // spark at the hearth
+  const veins = [];
+  REGIONS.forEach(r => r.links.forEach(nid => {
+    if (r.id < nid) veins.push({ a:r.id, b:nid, w:1, flow:0, grown:false });
+  }));
   return {
     dna: 8,
     inf: 4, sev: 1, let: 0,
@@ -368,6 +392,8 @@ function blankPlague(){
     convert:0, tribute:0,
     evolved: [],
     lands,
+    veins,
+    caravans: [],
     cure: 0, cureOn: false,
     news: "A cough in Ashen Glen. The hearth tastes of mushroom.",
     won: null
@@ -393,6 +419,112 @@ function rnd(a,b){ return a + Math.floor(Math.random()*(b-a+1)); }
 function pick(arr){ return arr[rnd(0,arr.length-1)]; }
 function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
 
+/* ---- seeded RNG, noise, graphs (Poisson-ish + Gabriel-ish) ---- */
+function hash32(s){
+  let h = 2166136261;
+  const str = String(s);
+  for (let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function mulberry(seed){
+  let t = seed >>> 0;
+  return function(){
+    t += 0x6D2B79F5;
+    let x = Math.imul(t ^ (t>>>15), 1|t);
+    x ^= x + Math.imul(x ^ (x>>>7), 61|x);
+    return ((x ^ (x>>>14)) >>> 0) / 4294967296;
+  };
+}
+function valNoise(x,y,seed){
+  const n = Math.sin(x*127.1 + y*311.7 + seed*0.001) * 43758.5453;
+  return n - Math.floor(n);
+}
+function poissonPoints(rng, n, minD, pad){
+  const pts = [];
+  let tries = 0;
+  while (pts.length < n && tries < n*40){
+    tries++;
+    const p = { x: pad + rng()*(1-2*pad), y: pad + rng()*(1-2*pad) };
+    if (pts.every(q => Math.hypot(p.x-q.x,p.y-q.y) >= minD)) pts.push(p);
+  }
+  return pts;
+}
+function gabrielEdges(pts){
+  const edges = [];
+  for (let i=0;i<pts.length;i++) for (let j=i+1;j<pts.length;j++){
+    const mx = (pts[i].x+pts[j].x)/2, my = (pts[i].y+pts[j].y)/2;
+    const r = Math.hypot(pts[i].x-pts[j].x, pts[i].y-pts[j].y)/2;
+    let ok = true;
+    for (let k=0;k<pts.length;k++) if (k!==i && k!==j){
+      if (Math.hypot(pts[k].x-mx, pts[k].y-my) < r-0.001){ ok=false; break; }
+    }
+    if (ok) edges.push([i,j]);
+  }
+  return edges;
+}
+function dijkstra(nodes, edges, blocked, start, goal){
+  const dist = {}, prev = {}, used = new Set();
+  nodes.forEach(id => dist[id] = Infinity);
+  dist[start] = 0;
+  while (used.size < nodes.length){
+    let u = null, best = Infinity;
+    nodes.forEach(id => { if (!used.has(id) && dist[id]<best){ best=dist[id]; u=id; } });
+    if (u==null) break;
+    used.add(u);
+    if (u===goal) break;
+    edges.forEach(e => {
+      if (e.a!==u && e.b!==u) return;
+      const v = e.a===u ? e.b : e.a;
+      if (blocked[v] || blocked[u]) return;
+      const nd = dist[u] + (e.w||1);
+      if (nd < dist[v]){ dist[v]=nd; prev[v]=u; }
+    });
+  }
+  if (dist[goal]===Infinity) return null;
+  const path = [goal];
+  while (path[0]!==start) path.unshift(prev[path[0]]);
+  return path;
+}
+
+const UNITS = {
+  sporeling: { name:"Sporeling", icon:"🍄", speed:0.62, atk:1.00, hp:1.0, tower:1.0, color:"#7dff9a" },
+  boneguard: { name:"Bone Guard", icon:"🦴", speed:0.42, atk:0.85, hp:1.7, tower:0.8, color:"#e8d7b0" },
+  capthrow:  { name:"Cap-Thrower", icon:"🎯", speed:0.50, atk:1.10, hp:0.9, tower:0.45, color:"#ffb347" },
+  veinwalker:{ name:"Vein-Walker", icon:"〰️", speed:0.78, atk:0.90, hp:0.85, tower:1.0, color:"#6ec8ff" },
+  convert:   { name:"Fervor Convert", icon:"🩸", speed:0.55, atk:1.25, hp:1.1, tower:1.0, color:"#c44536" },
+  seerspark: { name:"Seer-Spark", icon:"✨", speed:0.70, atk:0.80, hp:0.7, tower:0.25, color:"#c9a6ff" },
+};
+let sendUnit = "sporeling";
+
+const FACE_CACHE = {};
+function paintPortrait(seed){
+  if (FACE_CACHE[seed]) return FACE_CACHE[seed];
+  const rng = mulberry(hash32(seed));
+  const c = document.createElement("canvas"); c.width=96; c.height=96;
+  const g = c.getContext("2d");
+  const skin = `hsl(${18+rng()*28}, ${42+rng()*30}%, ${38+rng()*22}%)`;
+  const hair = `hsl(${rng()*360}, ${30+rng()*40}%, ${12+rng()*18}%)`;
+  const glow = [`#ff6a2a`,`#7dff9a`,`#6ec8ff`,`#c9a6ff`,`#ffb347`][Math.floor(rng()*5)];
+  g.fillStyle = "#140c08"; g.fillRect(0,0,96,96);
+  g.fillStyle = glow+"33"; g.beginPath(); g.arc(48,42,40,0,6.28); g.fill();
+  g.fillStyle = skin;
+  g.beginPath(); g.ellipse(48, 50, 22+rng()*4, 26+rng()*3, 0, 0, 6.28); g.fill();
+  g.fillStyle = hair;
+  g.beginPath(); g.ellipse(48, 28+rng()*6, 24, 14, 0, Math.PI, 0); g.fill();
+  if (rng()>0.4){ g.beginPath(); g.arc(48,18,10+rng()*8,0,6.28); g.fillStyle = glow; g.fill(); }
+  g.strokeStyle = "#1a0c08"; g.lineWidth = 1.2;
+  for (let i=0;i<6;i++){
+    g.beginPath();
+    g.moveTo(30+rng()*36, 40+rng()*30);
+    g.quadraticCurveTo(48, 55+rng()*20, 28+rng()*40, 70+rng()*16);
+    g.stroke();
+  }
+  g.fillStyle = glow;
+  g.beginPath(); g.arc(40,48,3,0,6.28); g.arc(56,48,3,0,6.28); g.fill();
+  FACE_CACHE[seed] = c.toDataURL("image/jpeg", 0.72);
+  return FACE_CACHE[seed];
+}
+
 function newDweller(role, forced={}) {
   const n = pick(NAMES) + " " + pick(["Ashborn","Sporekin","Emberfell","Wilds","Bone"]);
   const d = {
@@ -401,9 +533,10 @@ function newDweller(role, forced={}) {
     icon: pick(ICONS),
     role: role || pick(["hunter","gatherer","seer","guard"]),
     brawn: rnd(1,4), sight: rnd(1,4), grit: rnd(1,4), voice: rnd(1,4), craft: rnd(1,4),
-    hp: 100, happy: 70, room: null, xp: 0
+    hp: 100, happy: 70, room: null, xp: 0, faceSeed: null
   };
   Object.assign(d, forced);
+  if (!d.portrait) d.faceSeed = d.faceSeed || d.id;
   return d;
 }
 
@@ -465,6 +598,14 @@ function load(){
   try {
     const s = JSON.parse(localStorage.getItem("ashspore_v1"));
     if (s && !s.plague) s.plague = blankPlague();
+    if (s && s.plague && !s.plague.veins) {
+      const p = blankPlague();
+      s.plague.veins = p.veins;
+      s.plague.caravans = [];
+    }
+    if (s && s.dwellers) {
+      s.dwellers.forEach(d => { if (!d.portrait && !d.faceSeed) d.faceSeed = d.id; });
+    }
     if (s && s.dwellers) {
       const port = {
         "Chief Ashborn":"art/chief.jpg",
@@ -655,14 +796,15 @@ function tickPlague(dt){
       pushLog(r.name + " seals the mycelium roads.");
     }
 
-    // neighbor jump
-    r.links.forEach(nid => {
+    // neighbor jump along living veins
+    (P.veins||[]).filter(v => v.a===r.id || v.b===r.id).forEach(v => {
+      const nid = v.a===r.id ? v.b : v.a;
       const N = P.lands[nid];
       const dest = REGIONS.find(x=>x.id===nid);
-      if (!dest) return;
+      if (!dest || !N) return;
       const destAlive = Math.max(1, dest.pop - N.dead);
       if (N.inf > destAlive*0.98) return;
-      let chance = 0.0008 * P.inf * climateMul(dest.climate, P);
+      let chance = 0.0008 * P.inf * climateMul(dest.climate, P) * (v.grown?1.6:1);
       if (P.air) chance += 0.0012 * P.air;
       if (P.water && (r.climate==="humid" || dest.climate==="humid")) chance += 0.0014 * P.water;
       if (P.beast) chance += 0.001 * P.beast;
@@ -681,13 +823,7 @@ function tickPlague(dt){
   });
 
   if (newInf > 4) P.dna += Math.min(2.5, newInf/90) * dt;
-
-  // tribute
-  if (P.tribute) {
-    const { inf } = worldStats();
-    S.res.food = clamp(S.res.food + inf/18000 * dt, 0, S.cap.food);
-    S.res.bone = S.res.bone + inf/22000 * dt;
-  }
+  flowMycelium(dt);
 
   // convert births extra tribe chance
   if (P.convert && S.dwellers.length < popCap() && Math.random() < 0.0015*dt) {
@@ -790,6 +926,143 @@ function regionInfectPct(id){
   const L = S.plague.lands[id];
   const alive = Math.max(1, r.pop - L.dead);
   return clamp(L.inf / alive, 0, 1);
+}
+
+function networkEdges(){
+  return (S.plague.veins||[]).map(v => ({ a:v.a, b:v.b, w: 1 / (1+(v.flow||0)/8) + (v.grown?0.15:0) }));
+}
+function flowMycelium(dt){
+  const P = S.plague;
+  if (!P.veins) return;
+  P.veins.forEach(v => v.flow = Math.max(0, (v.flow||0)*0.92));
+  const ids = REGIONS.map(r=>r.id);
+  const blocked = {};
+  REGIONS.forEach(r => {
+    const L = P.lands[r.id];
+    blocked[r.id] = !!(L.closed && regionInfectPct(r.id) < 0.2);
+  });
+  let foodIn = 0, boneIn = 0, spiritIn = 0;
+  REGIONS.forEach(r => {
+    if (r.id==="glen") return;
+    const pct = regionInfectPct(r.id);
+    if (pct < 0.04) return;
+    const path = dijkstra(ids, networkEdges(), blocked, r.id, "glen");
+    if (!path) return;
+    const push = pct * (0.35 + (P.tribute?0.8:0.2)) * dt;
+    for (let i=0;i<path.length-1;i++){
+      const a=path[i], b=path[i+1];
+      const vein = P.veins.find(v => (v.a===a&&v.b===b)||(v.a===b&&v.b===a));
+      if (vein) vein.flow = Math.min(12, (vein.flow||0) + push);
+    }
+    foodIn += push * 1.1;
+    boneIn += push * 0.45;
+    spiritIn += push * 0.08;
+    if (Math.random() < 0.04*dt && pct>0.15) {
+      P.caravans = P.caravans || [];
+      P.caravans.push({ path, i:0, t:0, kind: pick(["sporeling","convert","veinwalker"]) });
+    }
+  });
+  S.res.food = clamp(S.res.food + foodIn, 0, S.cap.food);
+  S.res.bone += boneIn;
+  S.res.spirit = clamp(S.res.spirit + spiritIn, 0, S.cap.spirit);
+  P.caravans = (P.caravans||[]).filter(c => {
+    c.t += dt*0.35;
+    if (c.t>=1){ c.t=0; c.i++; }
+    return c.i < c.path.length-1;
+  });
+}
+function growVein(a,b){
+  if (a===b) return toast("Pick two different lands.");
+  const P = S.plague;
+  const exists = P.veins.find(v => (v.a===a&&v.b===b)||(v.a===b&&v.b===a));
+  if (exists && exists.grown) return toast("That vein already lives.");
+  if (regionInfectPct(a)<0.05 || regionInfectPct(b)<0.05) return toast("Both lands must carry the bloom.");
+  if (P.dna < 6) return toast("Need 6 DNA to grow a vein.");
+  P.dna -= 6;
+  if (exists) { exists.grown = true; exists.w = 0.6; }
+  else P.veins.push({ a,b, w:0.6, flow:1, grown:true });
+  pushLog("Grew a living vein "+a+" ↔ "+b+".");
+  toast("A new cord thickens under the earth.");
+  openStrain();
+}
+
+function genBattleMap(regionId, threat){
+  const rng = mulberry(hash32(regionId + ":" + (S.day||1) + ":" + (S.warsWon||0)));
+  const count = 6 + threat*2;
+  const pts = poissonPoints(rng, count, 0.16, 0.1);
+  if (pts.length<4){
+    pts.push({x:0.16,y:0.5},{x:0.84,y:0.5},{x:0.5,y:0.28},{x:0.5,y:0.72});
+  }
+  pts.sort((a,b)=>a.x-b.x);
+  pts[0].x = Math.min(pts[0].x, 0.18);
+  pts[pts.length-1].x = Math.max(pts[pts.length-1].x, 0.82);
+  const edges = gabrielEdges(pts);
+  const types = ["village","village","tower","forge","village"];
+  const nodes = pts.map((p,i) => {
+    let owner = "neutral";
+    if (i===0) owner="player";
+    if (i===pts.length-1) owner="enemy";
+    if (i===1 && rng()>0.5) owner="player";
+    if (i>=pts.length-2 && rng()>0.45) owner="enemy";
+    const type = i===0||i===pts.length-1 ? "village" : types[Math.floor(rng()*types.length)];
+    const n = 8 + Math.floor(rng()*10) + (owner==="enemy"? threat*3:0);
+    return { id:i, x:p.x, y:p.y, type, owner, n, lv: 1+Math.floor(rng()*Math.min(2,threat)) };
+  });
+  return { nodes, edges };
+}
+
+function zoomAtlas(x,y){
+  const el = $("atlas"); if (!el) return;
+  el.style.transform = `translate(${(50-x)*1.15}%, ${(50-y)*1.15}%) scale(2.15)`;
+}
+function resetAtlas(){
+  const el = $("atlas"); if (!el) return;
+  el.style.transform = "none";
+}
+let fogTimer = 0;
+function startFog(){
+  const c = $("fog"); if (!c) return;
+  const wrap = $("worldwrap");
+  c.width = wrap.clientWidth; c.height = wrap.clientHeight;
+  const ctx = c.getContext("2d");
+  const parts = Array.from({length: 36}, () => ({
+    x: Math.random()*c.width, y: Math.random()*c.height,
+    r: 8+Math.random()*18, v: 6+Math.random()*14, a: 0.08+Math.random()*0.12
+  }));
+  cancelAnimationFrame(fogTimer);
+  const step = () => {
+    if (!$("fog")) return;
+    ctx.clearRect(0,0,c.width,c.height);
+    parts.forEach(p => {
+      p.x += Math.sin(p.y*0.02)*0.4; p.y -= p.v*0.016;
+      if (p.y < -20){ p.y = c.height+10; p.x = Math.random()*c.width; }
+      ctx.fillStyle = `rgba(125,255,154,${p.a})`;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,6.28); ctx.fill();
+    });
+    if (S && S.plague && S.plague.veins){
+      S.plague.veins.forEach(v => {
+        const A = REGIONS.find(r=>r.id===v.a), B = REGIONS.find(r=>r.id===v.b);
+        if (!A||!B) return;
+        ctx.strokeStyle = v.grown ? "rgba(255,180,70,0.7)" : `rgba(125,255,154,${0.15+Math.min(0.5,(v.flow||0)/10)})`;
+        ctx.lineWidth = 1.5 + Math.min(4, v.flow||0);
+        ctx.beginPath();
+        ctx.moveTo(A.x/100*c.width, A.y/100*c.height);
+        ctx.lineTo(B.x/100*c.width, B.y/100*c.height);
+        ctx.stroke();
+      });
+      (S.plague.caravans||[]).forEach(car => {
+        const a = REGIONS.find(r=>r.id===car.path[car.i]);
+        const b = REGIONS.find(r=>r.id===car.path[car.i+1]);
+        if (!a||!b) return;
+        const x = (a.x + (b.x-a.x)*car.t)/100*c.width;
+        const y = (a.y + (b.y-a.y)*car.t)/100*c.height;
+        ctx.fillStyle = (UNITS[car.kind]||UNITS.sporeling).color;
+        ctx.beginPath(); ctx.arc(x,y,4,0,6.28); ctx.fill();
+      });
+    }
+    fogTimer = requestAnimationFrame(step);
+  };
+  fogTimer = requestAnimationFrame(step);
 }
 
 function toast(t){
@@ -908,6 +1181,7 @@ function openRoom(room){
 }
 function faceHTML(d){
   if (d && d.portrait) return `<img src="${d.portrait}" alt="">`;
+  if (d && d.faceSeed) return `<img src="${paintPortrait(d.faceSeed)}" alt="">`;
   return d ? (d.icon||"•") : "";
 }
 function personRow(d, assigned){
@@ -1019,6 +1293,8 @@ function openWar(){
       return `<div class="row"><div><b>${m.name}</b><small>Threat ${m.threat} · ${cost} spirit · infected ${pct}%</small></div>
         <button class="mini hot" data-map="${m.id}" ${lock?"disabled":""}>MARCH</button></div>`;
     }).join("")}
+    <div class="row"><div><b>Living Vein</b><small>Procedural mycelium field · 7 spirit · new layout each march</small></div>
+      <button class="mini hot" data-map="vein">MARCH</button></div>
     <button class="mini" style="width:100%" onclick="document.getElementById('sheetWar').classList.remove('on')">CLOSE</button>`;
   el.querySelectorAll("[data-map]").forEach(btn => btn.onclick = () => startBattle(btn.dataset.map));
 }
@@ -1073,6 +1349,7 @@ function openStrain(){
       <div class="statbox"><b>${P.let}</b><small>lethal</small></div>
     </div>
     <div id="worldwrap">
+      <div id="atlas">
       ${REGIONS.map(r => {
         const L = P.lands[r.id];
         const pct = regionInfectPct(r.id);
@@ -1083,8 +1360,10 @@ function openStrain(){
           ${r.name.split(" ")[0]}<br>${Math.floor(pct*100)}%
         </button>`;
       }).join("")}
+      </div>
+      <canvas id="fog"></canvas>
     </div>
-    <p style="color:#cbb89a;font-size:12px;margin:0 0 8px">${P.news} · dead ${deadPct}%</p>
+    <p style="color:#cbb89a;font-size:12px;margin:0 0 8px">${P.news} · dead ${deadPct}% · tap a land to zoom · tap two bloomed lands to grow a vein (6 DNA)</p>
     ${["transmit","symptom","ability"].map(br => `
       <div style="margin:8px 0 4px;color:var(--muted);font-size:11px;letter-spacing:.12em">${br.toUpperCase()}</div>
       ${EVOLUTIONS.filter(e=>e.branch===br).map(e => {
@@ -1095,17 +1374,35 @@ function openStrain(){
     `).join("")}
     <button class="mini" style="width:100%;margin-top:8px" onclick="document.getElementById('sheetStrain').classList.remove('on')">CLOSE</button>`;
   el.querySelectorAll("[data-ev]").forEach(b => b.onclick = () => evolveStrain(b.dataset.ev));
-  el.querySelectorAll("[data-reg]").forEach(b => b.onclick = () => {
-    const r = REGIONS.find(x=>x.id===b.dataset.reg);
+  let veinPick = null;
+  el.querySelectorAll("[data-reg]").forEach(b => b.onclick = (ev) => {
+    ev.stopPropagation();
+    const id = b.dataset.reg;
+    const r = REGIONS.find(x=>x.id===id);
     const L = P.lands[r.id];
-    toast(r.name+" · "+r.climate+" · inf "+Math.floor(L.inf)+" / dead "+Math.floor(L.dead)+(L.closed?" · ROADS SEALED":""));
+    zoomAtlas(r.x, r.y);
+    if (veinPick && veinPick!==id) { growVein(veinPick, id); veinPick=null; return; }
+    veinPick = id;
+    toast(r.name+" · "+r.climate+" · inf "+Math.floor(L.inf)+" / dead "+Math.floor(L.dead)+(L.closed?" · SEALED":"")+" · tap another bloomed land to grow a vein");
   });
+  $("worldwrap").onclick = (e) => { if (e.target.id==="worldwrap" || e.target.id==="fog" || e.target.id==="atlas") resetAtlas(); };
+  startFog();
 }
 
 function startBattle(mapId){
-  const map = MAPS.find(m=>m.id===mapId);
-  const pct = regionInfectPct(map.region);
-  const cost = Math.max(1, map.spirit - Math.floor(pct*100/25));
+  let map, pct, cost, region;
+  if (mapId==="vein"){
+    region = pick(REGIONS).id;
+    pct = regionInfectPct(region);
+    cost = 7;
+    const gen = genBattleMap(region, 2);
+    map = { id:"vein", region, name:"Living Vein", threat:2, spirit:7, reward:{bone:32, food:10, spirit:4}, nodes:gen.nodes, edges:gen.edges };
+  } else {
+    map = MAPS.find(m=>m.id===mapId);
+    region = map.region;
+    pct = regionInfectPct(region);
+    cost = Math.max(1, map.spirit - Math.floor(pct*100/25));
+  }
   if (S.res.spirit < cost) return toast("Not enough spirit to march.");
   S.res.spirit -= cost;
   closeSheets();
@@ -1118,7 +1415,8 @@ function startBattle(mapId){
   battle = {
     map, nodes, edges: map.edges,
     waves: [], selected: null, t: 0, over: false,
-    atkMul: 1 + Math.min(0.4, gritBoost/80) + pct*0.25
+    atkMul: 1 + Math.min(0.4, gritBoost/80) + pct*0.25,
+    region, infPct: pct
   };
   bindCanvas();
   loopBattle();
@@ -1164,11 +1462,14 @@ function bindCanvas(){
 
 function sendWave(fromId, toId){
   const from = battle.nodes[fromId];
+  const kind = sendUnit;
+  const U = UNITS[kind];
   const amt = Math.max(1, Math.floor(from.n * sendPct/100));
   if (from.n-amt < 0) return;
   from.n -= amt;
   battle.waves.push({
-    from: fromId, to: toId, owner: from.owner, n: amt, p: 0, speed: 0.55
+    from: fromId, to: toId, owner: from.owner, n: amt, p: 0,
+    speed: U.speed, kind, hp: U.hp
   });
 }
 
@@ -1189,7 +1490,9 @@ function enemyAI(dt){
   const pct = target.owner==="enemy" ? 0.3 : 0.55;
   const amt = Math.max(1, Math.floor(src.n*pct));
   src.n -= amt;
-  battle.waves.push({ from:src.id, to:target.id, owner:"enemy", n:amt, p:0, speed:0.5 });
+  const kinds = ["sporeling","boneguard","capthrow","veinwalker"];
+  const kind = pick(kinds);
+  battle.waves.push({ from:src.id, to:target.id, owner:"enemy", n:amt, p:0, speed: UNITS[kind].speed, kind, hp: UNITS[kind].hp });
 }
 
 function stepBattle(dt){
@@ -1206,7 +1509,10 @@ function stepBattle(dt){
         if (w.owner===n.owner) return;
         const midOk = w.p>0.15 && w.p<0.85;
         const near = battle.edges.some(([a,b])=> (a===n.id||b===n.id) && (a===w.from||b===w.from||a===w.to||b===w.to));
-        if (midOk && near && Math.random()<0.5*dt) w.n = Math.max(0, w.n - (1.2+n.lv));
+        if (midOk && near && Math.random()<0.5*dt) {
+          const resist = UNITS[w.kind] ? UNITS[w.kind].tower : 1;
+          w.n = Math.max(0, w.n - (1.2+n.lv)*resist);
+        }
       });
     }
   });
@@ -1219,7 +1525,9 @@ function stepBattle(dt){
     if (w.n<=0) return;
     if (w.p < 1) { left.push(w); return; }
     const dest = battle.nodes[w.to];
-    const mul = (forgeBonus[w.owner]||1) * (w.owner==="player"? battle.atkMul : 1);
+    const U = UNITS[w.kind] || UNITS.sporeling;
+    let mul = (forgeBonus[w.owner]||1) * (w.owner==="player"? battle.atkMul : 1) * U.atk * U.hp;
+    if (w.kind==="convert" && battle.infPct>0.25) mul *= 1.2;
     const force = w.n * mul;
     if (dest.owner === w.owner) dest.n += w.n;
     else {
@@ -1319,10 +1627,13 @@ function drawBattle(ctx, c){
     const A=battle.nodes[wave.from], B=battle.nodes[wave.to];
     const x = (A.x + (B.x-A.x)*wave.p)*w;
     const y = (A.y + (B.y-A.y)*wave.p)*h;
-    ctx.fillStyle = wave.owner==="player" ? "#ff8a3d" : wave.owner==="enemy" ? "#8b4dff" : "#888";
-    ctx.beginPath(); ctx.arc(x,y, 7*devicePixelRatio + Math.min(10, wave.n/6), 0, 6.28); ctx.fill();
-    ctx.fillStyle = "#fff"; ctx.font = (10*devicePixelRatio)+"px sans-serif";
-    ctx.fillText(Math.floor(wave.n), x-6*devicePixelRatio, y+4*devicePixelRatio);
+    ctx.fillStyle = wave.owner==="player" ? ((UNITS[wave.kind]||UNITS.sporeling).color) : "#8b4dff";
+    ctx.beginPath(); ctx.arc(x,y, 8*devicePixelRatio + Math.min(8, wave.n/8), 0, 6.28); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.font = (11*devicePixelRatio)+"px sans-serif";
+    ctx.textAlign="center";
+    ctx.fillText((UNITS[wave.kind]||UNITS.sporeling).icon, x, y+4*devicePixelRatio);
+    ctx.font = (8*devicePixelRatio)+"px sans-serif";
+    ctx.fillText(Math.floor(wave.n), x, y+16*devicePixelRatio);
   });
   battle.nodes.forEach(n=>{
     const x=n.x*w, y=n.y*h, r=22*devicePixelRatio;
@@ -1364,8 +1675,8 @@ function startGame(fresh){
     $("modal").innerHTML = `<div class="card">
       <h2>THE FIRST NIGHT</h2>
       <p>Tap glowing bubbles to harvest. Tap a room to post tribe. Build Dens for beds, a Barracks to march, an Altar to chant.</p>
-      <p>STRAIN is the plague layer: spend DNA to evolve spread, symptoms, and stealth. Infected lands are cheaper and weaker to march. If severity wakes the shamans, outrun the cleanse.</p>
-      <p>Wilds: tap your village, then a linked node. Send 50%. Double-tap a village to upgrade it with 10 soldiers.</p>
+      <p>STRAIN: tap a land to zoom the atlas. Tap two blooming lands to grow a mycelium vein. Fog and caravans ride the cords. Converts get unique faces.</p>
+      <p>Wilds: pick a unit (sporeling, bone guard, cap-thrower, vein-walker, convert, seer-spark), tap your village, then a linked node. Living Vein maps generate new layouts each march.</p>
       <button class="bigbtn" id="oktut">I KEEP THE FIRE</button>
     </div>`;
     $("oktut").onclick = ()=> $("modal").className="";
@@ -1383,6 +1694,12 @@ $("btnFlee").onclick = () => { if (battle) endBattle(false); };
 document.querySelectorAll(".pct").forEach(b => b.onclick = () => {
   sendPct = +b.dataset.p;
   document.querySelectorAll(".pct").forEach(x=>x.classList.toggle("on", x===b));
+});
+document.querySelectorAll(".unitbtn").forEach(b => b.onclick = () => {
+  sendUnit = b.dataset.u;
+  document.querySelectorAll(".unitbtn").forEach(x=>x.classList.toggle("on", x===b));
+  const u = UNITS[sendUnit];
+  $("bhint").textContent = u.name + " · speed "+u.speed+" · tap source then road";
 });
 if (load()) $("btnCont").style.display = "block";
 drawBattle.bg = new Image();

@@ -5,1827 +5,752 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#0b0706" />
-  <title>ASHSPORE — Hold of Fire and Fungus</title>
+  <title>ASHSPORE</title>
   <link rel="manifest" href="manifest.json" />
   <style>
     :root {
-      --bg: #0b0706;
-      --cave: #1a100c;
-      --stone: #2a1b14;
-      --stone2: #3a261c;
-      --ember: #ff6a2a;
-      --ember2: #ffb347;
-      --spore: #7dff9a;
-      --dew: #6ec8ff;
-      --spirit: #c9a6ff;
-      --bone: #e8d7b0;
-      --blood: #c44536;
-      --ink: #f4e8d4;
-      --muted: #9a846c;
-      --plague: #6dff7a;
-      --dead: #4a1020;
-      --neutral: #6d6458;
-      --safe: env(safe-area-inset-top, 12px);
-      --safeb: env(safe-area-inset-bottom, 12px);
+      --ember:#ff6a2a; --ember2:#ffb347; --spore:#7dff9a; --dew:#6ec8ff;
+      --spirit:#c9a6ff; --bone:#e8d7b0; --ink:#f4e8d4; --muted:#9a846c;
+      --safe: env(safe-area-inset-top, 8px); --safeb: env(safe-area-inset-bottom, 10px);
     }
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body {
-      margin: 0; height: 100%; background: var(--bg); color: var(--ink);
-      font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
-      overflow: hidden; touch-action: manipulation; user-select: none;
-    }
-    #app { height: 100%; display: flex; flex-direction: column; position: relative; }
-    button { font-family: inherit; }
-
-    /* TITLE */
-    .screen { position: absolute; inset: 0; display: none; flex-direction: column; }
-    .screen.on { display: flex; }
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    html,body { margin:0; height:100%; background:#0b0706; color:var(--ink);
+      font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif; overflow:hidden; user-select:none; touch-action:none; }
+    #app { height:100%; position:relative; }
+    .screen { position:absolute; inset:0; display:none; flex-direction:column; }
+    .screen.on { display:flex; }
     #title {
-      background:
-        linear-gradient(#0b0706cc, #0b0706ee),
-        url("art/title.jpg") center 30% / cover no-repeat;
-      align-items: center; justify-content: center; text-align: center; padding: 24px;
+      background: linear-gradient(#0b0706cc,#0b0706ee), url("art/title.jpg") center 30%/cover no-repeat;
+      align-items:center; justify-content:center; text-align:center; padding:24px;
     }
-    .cast {
-      display: flex; gap: 8px; justify-content: center; margin: 0 0 18px; flex-wrap: wrap;
-    }
-    .cast img {
-      width: 64px; height: 64px; object-fit: cover; object-position: top;
-      border-radius: 50%; border: 2px solid #ffb347; box-shadow: 0 0 16px #ff6a2a66;
-    }
-    #vaultwrap { flex: 1; overflow-y: auto; overflow-x: hidden; background:
-      linear-gradient(#0b0706cc, #0b0706d8),
-      url("art/hold.jpg") center top / cover no-repeat;
-    }
-    .face img, .slot img {
-      width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 50%;
-    }
-    .face { overflow: hidden; padding: 0; }
-    #worldwrap {
-      position: relative; height: 360px; background: #0b0706;
-      border: 1px solid #2a3a20; border-radius: 12px; margin: 8px 0 10px; overflow: hidden;
-      touch-action: none;
-    }
-    #atlas {
-      position: absolute; inset: 0;
-      background: url("art/world.jpg") center / cover no-repeat;
-      transform-origin: 50% 50%;
-      transition: transform .35s ease;
-    }
-    #fog {
-      position: absolute; inset: 0; pointer-events: none; z-index: 2;
-    }
-    .unitbtn {
-      min-width: 44px; height: 40px; border-radius: 10px; border: 1px solid #4a3224;
-      background: #211610; color: var(--bone); font-size: 16px; font-weight: 800;
-    }
-    .unitbtn.on { background: var(--ember); color: #2a0d04; border: 0; }
-    .region {
-      position: absolute; width: 52px; height: 52px; border-radius: 50%;
-      border: 2px solid #e8d7b0; background: #1a1810cc; display: flex;
-      flex-direction: column; align-items: center; justify-content: center;
-      font-size: 8px; font-weight: 800; color: var(--bone); text-align: center;
-      line-height: 1.05; transform: translate(-50%,-50%);
-      text-shadow: 0 1px 2px #000;
-    }
-    #battle { background: #0c0a08 url("art/battle.jpg") center / cover no-repeat; }
-    .logo {
-      font-size: clamp(42px, 12vw, 72px); letter-spacing: .18em; font-weight: 800;
-      color: var(--ember2); text-shadow: 0 0 24px #ff6a2a88, 0 4px 0 #3a1208;
-      margin: 0;
-    }
-    .tag { letter-spacing: .28em; font-size: 11px; color: var(--muted); margin: 6px 0 28px; }
-    .blurb {
-      max-width: 340px; color: #d7c4a6; font-size: 14px; line-height: 1.5; margin-bottom: 28px;
-    }
-    .bigbtn {
-      width: min(86vw, 320px); padding: 16px 18px; border: 0; border-radius: 14px;
-      background: linear-gradient(#ff8a3d, #d44512); color: #2a0d04; font-weight: 800;
-      letter-spacing: .12em; font-size: 16px; box-shadow: 0 8px 0 #6a1c08, 0 12px 30px #ff6a2a44;
-    }
-    .ghost {
-      margin-top: 12px; background: transparent; color: var(--bone); border: 1px solid #5a4030;
-      box-shadow: none; font-weight: 600;
-    }
-    .credits { position: absolute; bottom: calc(16px + var(--safeb)); font-size: 11px; color: #6a5644; }
-
-    /* HUD */
+    .cast { display:flex; gap:8px; justify-content:center; margin:0 0 16px; flex-wrap:wrap; }
+    .cast img { width:58px; height:58px; object-fit:cover; object-position:top; border-radius:50%; border:2px solid #ffb347; }
+    .logo { font-size:clamp(40px,12vw,70px); letter-spacing:.18em; font-weight:800; color:var(--ember2);
+      text-shadow:0 0 24px #ff6a2a88; margin:0; }
+    .tag { letter-spacing:.28em; font-size:11px; color:var(--muted); margin:6px 0 18px; }
+    .blurb { max-width:340px; color:#d7c4a6; font-size:14px; line-height:1.5; margin-bottom:22px; }
+    .bigbtn { width:min(86vw,320px); padding:16px; border:0; border-radius:14px;
+      background:linear-gradient(#ff8a3d,#d44512); color:#2a0d04; font-weight:800; letter-spacing:.12em; font-size:16px; }
+    .ghost { margin-top:12px; background:transparent; color:var(--bone); border:1px solid #5a4030; }
+    .credits { position:absolute; bottom:calc(14px + var(--safeb)); font-size:11px; color:#6a5644; }
+    #play { background:#0b0706; }
+    #stage { position:absolute; inset:0; width:100%; height:100%; display:block; }
     #hud {
-      padding: calc(8px + var(--safe)) 10px 8px;
-      background: linear-gradient(#1c120e, #120c0a);
-      border-bottom: 1px solid #3a261c;
-      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px 10px;
+      position:absolute; left:0; right:0; top:0; z-index:5;
+      padding:calc(6px + var(--safe)) 8px 6px;
+      background:linear-gradient(#1c120eee,#120c0a00); font-size:11px;
+      display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px 8px; pointer-events:none;
     }
-    .res {
-      display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
+    .res { display:flex; align-items:center; gap:4px; }
+    .bar { flex:1; height:6px; background:#2a1b14; border-radius:4px; overflow:hidden; }
+    .bar i { display:block; height:100%; background:var(--ember); }
+    #prompt {
+      position:absolute; left:50%; bottom:132px; transform:translateX(-50%);
+      z-index:6; display:none; padding:8px 14px; border-radius:12px;
+      background:#1a100cee; border:1px solid #ffb347; font-size:12px; letter-spacing:.08em;
     }
-    .bar {
-      flex: 1; height: 8px; background: #241610; border-radius: 99px; overflow: hidden;
-      border: 1px solid #3d261c;
+    #pads {
+      position:absolute; left:0; right:0; bottom:0; z-index:7;
+      padding: 0 12px calc(10px + var(--safeb));
+      display:flex; justify-content:space-between; align-items:flex-end; pointer-events:none;
     }
-    .bar > i { display: block; height: 100%; width: 0%; }
-    .ember i { background: linear-gradient(90deg, #c2410c, #ffb347); }
-    .food i { background: linear-gradient(90deg, #3d8b4a, #7dff9a); }
-    .dew i { background: linear-gradient(90deg, #1d6fa5, #6ec8ff); }
-    .spirit i { background: linear-gradient(90deg, #6b3fa0, #c9a6ff); }
-    .pop, .bone, .hap { justify-content: space-between; }
-    .news {
-      grid-column: 1 / -1; font-size: 11px; color: #c9e8b8; letter-spacing: .04em;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .region.hot { box-shadow: 0 0 16px #6dff7a88; }
-    .statgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px; }
-    .statbox { background: #211610; border-radius: 8px; padding: 8px; text-align: center; }
-    .statbox b { display: block; font-size: 16px; color: var(--spore); }
-    .statbox small { color: var(--muted); }
-
-    /* VAULT SCROLL */
-    #vault { padding: 10px 8px 110px; display: flex; flex-direction: column; gap: 10px; }
-    .floor {
-      display: grid; grid-template-columns: 1fr 28px 1fr 1fr; gap: 6px; min-height: 108px;
-    }
-    .floor.gate { grid-template-columns: 1fr 1fr 1fr; }
-    .shaft {
-      background: linear-gradient(#2a1c14, #1a100c);
-      border: 1px solid #4a3224; border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      color: #6a5040; font-size: 10px; writing-mode: vertical-rl;
-    }
-    .room {
-      position: relative; border-radius: 10px; min-height: 108px;
-      background: #1c120ecc; border: 1px solid #3a281e;
-      overflow: hidden; padding: 8px; backdrop-filter: blur(2px);
-    }
-    .room.empty {
-      background: repeating-linear-gradient(45deg, #14100c, #14100c 6px, #18120e 6px 12px);
-      color: #5a4638; display: flex; align-items: center; justify-content: center;
-      font-size: 22px; font-weight: 800;
-    }
-    .room.locked { opacity: .35; pointer-events: none; }
-    .room h3 { margin: 0; font-size: 12px; letter-spacing: .08em; color: var(--bone); }
-    .room .meta { font-size: 10px; color: var(--muted); margin-top: 2px; }
-    .slots { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
-    .slot {
-      width: 28px; height: 28px; border-radius: 50%; border: 1px dashed #5a4030;
-      display: grid; place-items: center; font-size: 14px; background: #120c0a;
-    }
-    .slot.filled { border-style: solid; background: #2a1a12; }
-    .bubble {
-      position: absolute; right: 6px; top: 6px; min-width: 28px; height: 28px;
-      border-radius: 99px; background: #ffb347; color: #2a0d04; font-weight: 800;
-      font-size: 12px; display: none; place-items: center; padding: 0 6px;
-      box-shadow: 0 0 12px #ff6a2a88; animation: pop 1.2s ease-in-out infinite;
-    }
-    .bubble.on { display: grid; }
-    @keyframes pop { 50% { transform: scale(1.12); } }
-    .room.hearth { box-shadow: inset 0 0 24px #ff6a2a55; }
-    .room.glowcap { box-shadow: inset 0 0 18px #ffb34733; }
-    .room.sporebed { box-shadow: inset 0 0 18px #7dff9a33; }
-    .room.dewcatcher { box-shadow: inset 0 0 18px #6ec8ff33; }
-    .room.altar { box-shadow: inset 0 0 18px #c9a6ff33; }
-    .room.incident { outline: 2px solid #c44536; animation: shake .4s linear 2; }
-    @keyframes shake { 25% { transform: translateX(-3px);} 75% { transform: translateX(3px);} }
-
-    /* DOCK */
-    #dock {
-      position: absolute; left: 0; right: 0; bottom: 0;
-      padding: 8px 10px calc(10px + var(--safeb));
-      background: linear-gradient(transparent, #0b0706 18%);
-      display: flex; gap: 8px;
-    }
-    .dockbtn {
-      flex: 1; padding: 12px 6px; border-radius: 12px; border: 1px solid #4a3224;
-      background: #1c120e; color: var(--bone); font-weight: 800; font-size: 12px;
-      letter-spacing: .06em;
-    }
-    .dockbtn.hot { background: linear-gradient(#ff8a3d, #d44512); color: #2a0d04; border: 0; }
-
-    /* SHEETS */
+    #pads button { pointer-events:auto; width:64px; height:64px; border-radius:50%;
+      border:1px solid #5a4030; background:#1a100ccc; color:var(--bone); font-weight:800; font-size:18px; }
+    #pads .jump { width:74px; height:74px; background:#ff6a2acc; color:#2a0d04; border:0; }
+    #pads .act { background:#7dff9a22; color:var(--spore); }
+    #pads .row { display:flex; gap:8px; }
     .sheet {
-      position: absolute; left: 0; right: 0; bottom: 0; max-height: 72%;
-      background: #16100c; border-top: 1px solid #4a3224; border-radius: 18px 18px 0 0;
-      padding: 14px 14px calc(16px + var(--safeb)); display: none; z-index: 20;
-      overflow: auto;
+      position:absolute; left:0; right:0; bottom:0; max-height:62%; overflow:auto; z-index:12;
+      background:#140e0c; border-top:2px solid #3a261c; padding:14px 14px 28px;
+      transform:translateY(110%); transition:transform .2s;
     }
-    .sheet.on { display: block; }
-    .sheet h2 { margin: 0 0 10px; font-size: 16px; letter-spacing: .1em; }
-    .row { display: flex; justify-content: space-between; align-items: center; gap: 8px;
-      padding: 10px; background: #211610; border-radius: 10px; margin-bottom: 8px; }
-    .row b { font-size: 13px; }
-    .row small { color: var(--muted); display: block; }
-    .mini {
-      padding: 8px 10px; border: 0; border-radius: 8px; background: #3a261c; color: var(--bone);
-      font-weight: 700;
-    }
-    .mini.hot { background: var(--ember); color: #2a0d04; }
-    .pill { font-size: 10px; padding: 2px 6px; border-radius: 99px; background: #2a1a12; color: var(--muted); }
-
-    /* PEOPLE */
-    .face {
-      width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
-      background: #2a1a12; border: 1px solid #5a4030; font-size: 18px; flex-shrink: 0;
-    }
-
-    /* BATTLE */
-    #battle { background: #0c0a08; }
-    #bcanvas { width: 100%; flex: 1; display: block; background: #0e0b08; }
-    #bbar {
-      padding: 8px 10px calc(10px + var(--safeb));
-      display: flex; gap: 8px; align-items: center;
-      background: #160f0c; border-top: 1px solid #3a261c;
-    }
-    .pct {
-      width: 46px; height: 40px; border-radius: 10px; border: 1px solid #4a3224;
-      background: #211610; color: var(--bone); font-weight: 800;
-    }
-    .pct.on { background: var(--ember); color: #2a0d04; border: 0; }
-
-    /* TOAST / EVENT */
-    #toast {
-      position: absolute; top: 22%; left: 50%; transform: translateX(-50%);
-      background: #211610ee; border: 1px solid #5a4030; color: var(--bone);
-      padding: 10px 14px; border-radius: 12px; font-size: 13px; display: none; z-index: 40;
-      max-width: 86vw; text-align: center;
-    }
-    #modal {
-      position: absolute; inset: 0; background: #0008; display: none; z-index: 30;
-      align-items: center; justify-content: center; padding: 20px;
-    }
-    #modal.on { display: flex; }
-    .card {
-      width: min(92vw, 380px); background: #16100c; border: 1px solid #4a3224;
-      border-radius: 16px; padding: 18px;
-    }
-    .card h2 { margin: 0 0 8px; }
-    .card p { color: #d7c4a6; font-size: 14px; line-height: 1.45; }
-
-    .log { font-size: 12px; color: #cbb89a; max-height: 160px; overflow: auto; }
-    .log div { padding: 4px 0; border-bottom: 1px solid #2a1c16; }
+    .sheet.on { transform:none; }
+    .sheet h2 { margin:0 0 8px; font-size:16px; letter-spacing:.12em; color:var(--ember2); }
+    .row { display:flex; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px solid #2a1c16; }
+    .mini { border:0; border-radius:8px; padding:6px 10px; background:#3a261c; color:var(--bone); font-weight:700; }
+    .mini.hot { background:var(--ember); color:#2a0d04; }
+    .face { width:36px; height:36px; border-radius:50%; overflow:hidden; background:#2a1b14; flex:0 0 36px; }
+    .face img { width:100%; height:100%; object-fit:cover; object-position:top; }
+    .person { display:flex; gap:8px; align-items:center; }
+    #toast { position:absolute; left:50%; top:22%; transform:translateX(-50%); z-index:20;
+      display:none; background:#1a100c; border:1px solid var(--ember); padding:8px 14px; border-radius:10px; font-size:13px; }
+    #modal { position:absolute; inset:0; background:#0b0706cc; display:none; align-items:center; justify-content:center; z-index:30; padding:18px; }
+    #modal.on { display:flex; }
+    #modal .card { background:#1a100c; border:1px solid #3a261c; border-radius:16px; padding:18px; max-width:360px; }
+    #worldwrap { position:relative; height:280px; border-radius:12px; overflow:hidden; margin:8px 0; background:#0b0706; }
+    #atlas { position:absolute; inset:0; background:url("art/world.jpg") center/cover; transform-origin:50% 50%; transition:transform .3s; }
+    .region { position:absolute; width:48px; height:48px; border-radius:50%; border:2px solid #e8d7b0;
+      display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:800; text-align:center;
+      transform:translate(-50%,-50%); background:#1a1810cc; }
+    #fog { position:absolute; inset:0; pointer-events:none; }
   </style>
 </head>
 <body>
   <div id="app">
     <section id="title" class="screen on">
       <div class="cast">
-        <img src="art/chief.jpg" alt="Chief Ashborn" />
-        <img src="art/thorn.jpg" alt="Thorn Wilds" />
-        <img src="art/moss.jpg" alt="Moss Sporekin" />
-        <img src="art/lumen.jpg" alt="Lumen Emberfell" />
-        <img src="art/raider.jpg" alt="Ash-Raider" />
-        <img src="art/oldone.jpg" alt="The Old One" />
+        <img src="art/chief.jpg" alt="" /><img src="art/thorn.jpg" alt="" />
+        <img src="art/moss.jpg" alt="" /><img src="art/lumen.jpg" alt="" />
+        <img src="art/raider.jpg" alt="" /><img src="art/oldone.jpg" alt="" />
       </div>
       <h1 class="logo">ASHSPORE</h1>
-      <div class="tag">HOLD • TRIBE • WILD WARS</div>
-      <p class="blurb">
-        A vault cut into dead stone. A hearth the Old Ones cannot snuff.
-        Grow your tribe, keep the rites, pour spore-soldiers across the wilds —
-        then evolve the Ashspore itself like a living plague. Spread. Hide. Convert.
-        Outrun the cleanse.
-      </p>
+      <div class="tag">HOLD · BLOOM · WILDS</div>
+      <p class="blurb">Walk the cut stone yourself. Post hands to the pits. Carry the bloom through the caves until the lands wear your name.</p>
       <button class="bigbtn" id="btnNew">LIGHT THE HEARTH</button>
       <button class="bigbtn ghost" id="btnCont" style="display:none">RETURN TO HOLD</button>
-      <div class="credits">Phone-first · offline save · no ads</div>
+      <div class="credits">Phone-first · offline save</div>
     </section>
 
-    <section id="hold" class="screen">
+    <section id="play" class="screen">
+      <canvas id="stage"></canvas>
       <div id="hud"></div>
-      <div id="vaultwrap"><div id="vault"></div></div>
-      <div id="dock">
-        <button class="dockbtn" id="btnPeople">TRIBE</button>
-        <button class="dockbtn" id="btnBuild">BUILD</button>
-        <button class="dockbtn hot" id="btnWar">WILDS</button>
-        <button class="dockbtn" id="btnStrain">STRAIN</button>
-        <button class="dockbtn" id="btnLog">RITES</button>
+      <div id="prompt"></div>
+      <div id="pads">
+        <div class="row">
+          <button id="btnL">◀</button>
+          <button id="btnR">▶</button>
+        </div>
+        <div class="row">
+          <button class="act" id="btnAct">ACT</button>
+          <button class="jump" id="btnJ">JUMP</button>
+        </div>
       </div>
     </section>
 
-    <section id="battle" class="screen">
-      <canvas id="bcanvas"></canvas>
-      <div id="bbar">
-        <button class="unitbtn on" data-u="sporeling" title="Sporeling">🍄</button>
-        <button class="unitbtn" data-u="boneguard" title="Bone Guard">🦴</button>
-        <button class="unitbtn" data-u="capthrow" title="Cap-Thrower">🎯</button>
-        <button class="unitbtn" data-u="veinwalker" title="Vein-Walker">〰️</button>
-        <button class="unitbtn" data-u="convert" title="Fervor Convert">🩸</button>
-        <button class="unitbtn" data-u="seerspark" title="Seer-Spark">✨</button>
-        <button class="pct" data-p="25">25</button>
-        <button class="pct on" data-p="50">50</button>
-        <button class="pct" data-p="75">75</button>
-        <button class="pct" data-p="100">100</button>
-        <div style="flex:1;font-size:11px;color:#cbb89a" id="bhint">Pick a unit, tap source, then a linked node.</div>
-        <button class="dockbtn" id="btnFlee">FLEE</button>
-      </div>
-    </section>
-
-    <div id="sheetPeople" class="sheet"></div>
-    <div id="sheetBuild" class="sheet"></div>
-    <div id="sheetWar" class="sheet"></div>
-    <div id="sheetStrain" class="sheet"></div>
-    <div id="sheetLog" class="sheet"></div>
+    <div id="sheet" class="sheet"></div>
     <div id="toast"></div>
     <div id="modal"></div>
   </div>
-
 <script>
-const NAMES = ["Ash","Bran","Cinder","Dew","Ember","Flint","Grit","Hearth","Ivy","Jute","Kerr","Lumen","Moss","Nettle","Orin","Pike","Quill","Rook","Sable","Thorn","Ulna","Vex","Wren","Yarrow","Zest"];
-const ICONS = ["🧔","👩","🧑","🧓","👧","👦","🧙","🏹","🪓","🕯️"];
+const NAMES = ["Ash","Bran","Cinder","Dew","Ember","Flint","Grit","Hearth","Ivy","Jute","Kerr","Lumen","Moss","Nettle","Orin","Pike","Quill","Rook","Sable","Thorn","Ulna","Vex","Wren","Yarrow"];
 const ROOM_DEFS = {
-  empty: { name:"Hollow", icon:"＋", cost:{}, slots:0 },
-  hearth: { name:"Hearth", icon:"🔥", cost:{}, slots:2, prod:"spirit", base:1.2, stat:"voice" },
-  glowcap: { name:"Glowcap Pit", icon:"🟡", cost:{bone:40, food:10}, slots:2, prod:"ember", base:2.4, stat:"brawn", unlock:0 },
-  sporebed: { name:"Sporebed", icon:"🍄", cost:{bone:35, ember:8}, slots:2, prod:"food", base:2.2, stat:"craft", unlock:0 },
-  dewcatcher: { name:"Dewcatcher", icon:"💧", cost:{bone:35, ember:8}, slots:2, prod:"dew", base:2.2, stat:"sight", unlock:0 },
-  den: { name:"Den", icon:"🛏️", cost:{bone:50, food:15}, slots:0, pop:4, unlock:0 },
-  altar: { name:"Bone Altar", icon:"🕯️", cost:{bone:70, spirit:8}, slots:2, prod:"spirit", base:1.6, stat:"voice", unlock:6 },
-  barracks: { name:"Spore Barracks", icon:"🛡️", slots:2, cost:{bone:80, food:20}, unlock:8, war:true, stat:"grit" },
-  watchgate: { name:"Watchgate", icon:"🚪", cost:{bone:60}, slots:2, defense:true, stat:"grit", unlock:0 },
-  nursery: { name:"Pairing Hollow", icon:"💞", cost:{bone:90, food:25}, slots:2, breed:true, stat:"voice", unlock:10 },
+  empty:{name:"Hollow",prod:null,slots:0,cost:{}},
+  hearth:{name:"Hearth",prod:"spirit",base:1.2,slots:2,stat:"voice",cost:{}},
+  glowcap:{name:"Glowcap Pit",prod:"ember",base:2.4,slots:2,stat:"brawn",cost:{bone:40,food:10}},
+  sporebed:{name:"Sporebed",prod:"food",base:2.2,slots:2,stat:"craft",cost:{bone:35,ember:8}},
+  dewcatcher:{name:"Dewcatcher",prod:"dew",base:2.2,slots:2,stat:"sight",cost:{bone:35,ember:8}},
+  den:{name:"Den",prod:null,pop:4,slots:0,cost:{bone:50,food:15}},
+  altar:{name:"Bone Altar",prod:"spirit",base:1.6,slots:2,stat:"voice",cost:{bone:70,spirit:8}},
+  barracks:{name:"Spore Barracks",prod:null,slots:2,war:true,stat:"grit",cost:{bone:80,food:20}},
+  watchgate:{name:"Watchgate",prod:null,slots:2,defense:true,stat:"grit",cost:{bone:60}},
+  nursery:{name:"Pairing Hollow",prod:null,slots:2,breed:true,stat:"voice",cost:{bone:90,food:25}},
 };
-const STATS = ["brawn","sight","grit","voice","craft"];
-
 const REGIONS = [
-  { id:"glen", name:"Ashen Glen", x:50, y:48, pop:12000, climate:"temperate", links:["ribs","dewfen","crow"] },
-  { id:"ribs", name:"Rib-Cairn", x:18, y:20, pop:8000, climate:"cold", links:["glen","night","crow"] },
-  { id:"dewfen", name:"Dewfen", x:78, y:20, pop:9000, climate:"humid", links:["glen","coast","ember"] },
-  { id:"crow", name:"Crow Pass", x:50, y:12, pop:5000, climate:"cold", links:["glen","ribs","night"] },
-  { id:"coast", name:"Bone Coast", x:86, y:50, pop:11000, climate:"humid", links:["dewfen","ember","mouth"] },
-  { id:"ember", name:"Ember Wastes", x:60, y:78, pop:4000, climate:"hot", links:["dewfen","coast","glen"] },
-  { id:"night", name:"Nightwood", x:16, y:48, pop:7000, climate:"cold", links:["ribs","crow","mouth"] },
-  { id:"mouth", name:"Old One Mouth", x:20, y:80, pop:6000, climate:"hot", links:["night","coast","ember"] },
+  {id:"glen",name:"Ashen Glen",x:50,y:48,pop:12000,climate:"temperate",links:["ribs","dewfen","crow"]},
+  {id:"ribs",name:"Rib-Cairn",x:18,y:20,pop:8000,climate:"cold",links:["glen","night","crow"]},
+  {id:"dewfen",name:"Dewfen",x:78,y:20,pop:9000,climate:"humid",links:["glen","coast","ember"]},
+  {id:"crow",name:"Crow Pass",x:50,y:12,pop:5000,climate:"cold",links:["glen","ribs","night"]},
+  {id:"coast",name:"Bone Coast",x:86,y:50,pop:11000,climate:"humid",links:["dewfen","ember","mouth"]},
+  {id:"ember",name:"Ember Wastes",x:60,y:78,pop:4000,climate:"hot",links:["dewfen","coast","glen"]},
+  {id:"night",name:"Nightwood",x:16,y:48,pop:7000,climate:"cold",links:["ribs","crow","mouth"]},
+  {id:"mouth",name:"Old One Mouth",x:20,y:80,pop:6000,climate:"hot",links:["night","coast","ember"]},
 ];
-
 const EVOLUTIONS = [
-  { id:"wind", branch:"transmit", name:"Wind Spores", cost:6, desc:"+air spread between linked lands", fx:{air:1, inf:2} },
-  { id:"beast", branch:"transmit", name:"Beast Hide", cost:7, desc:"Carried by elk, crows, wolves", fx:{beast:1, inf:2} },
-  { id:"dewvein", branch:"transmit", name:"Dew Veins", cost:8, desc:"+water spread via rivers and coast", fx:{water:1, inf:2} },
-  { id:"warseed", branch:"transmit", name:"Warband Blood", cost:9, desc:"Each march seeds the destination", fx:{war:1, inf:1} },
-  { id:"cough", branch:"symptom", name:"Coughbloom", cost:5, desc:"Spores in the throat. +infectivity", fx:{inf:4, sev:1} },
-  { id:"fever", branch:"symptom", name:"Fever Cap", cost:6, desc:"The shamans notice. +severity", fx:{sev:4, inf:1} },
-  { id:"fervor", branch:"symptom", name:"Mycelial Fervor", cost:10, desc:"Infected convert to your creed instead of rotting as fast", fx:{convert:1, sev:2, inf:2} },
-  { id:"bloom", branch:"symptom", name:"Bone Bloom", cost:11, desc:"Ribs split into fruit. +lethality", fx:{let:5, sev:3} },
-  { id:"rot", branch:"symptom", name:"Necrotic Rot", cost:14, desc:"Villages empty. High lethality", fx:{let:8, sev:4} },
-  { id:"hunger", branch:"symptom", name:"Light Hunger", cost:8, desc:"The sick send tribute toward the hearth", fx:{tribute:1, sev:2, inf:1} },
-  { id:"cold", branch:"ability", name:"Cold Hardening", cost:7, desc:"Spreads in Nightwood and cairns", fx:{cold:2} },
-  { id:"heat", branch:"ability", name:"Heat Hardening", cost:7, desc:"Survives Ember Wastes and the Mouth", fx:{heat:2} },
-  { id:"damp", branch:"ability", name:"Gill Spores", cost:6, desc:"Loves Dewfen and the Coast", fx:{humid:2} },
-  { id:"veil", branch:"ability", name:"Fog Veil", cost:9, desc:"Hides from the cleanse", fx:{stealth:3, sev:-2} },
-  { id:"burst", branch:"ability", name:"Spore Burst", cost:12, desc:"Instant pulse of infection in every touched land", fx:{burst:1, inf:1} },
+  {id:"wind",branch:"carry",name:"Wind Spores",cost:6,desc:"Rides the air between linked lands",fx:{air:1,inf:2}},
+  {id:"beast",branch:"carry",name:"Beast Hide",cost:7,desc:"Elk and crows wear it outward",fx:{beast:1,inf:2}},
+  {id:"dewvein",branch:"carry",name:"Dew Veins",cost:8,desc:"Travels rivers and the coast",fx:{water:1,inf:2}},
+  {id:"warseed",branch:"carry",name:"Warband Blood",cost:9,desc:"Every wilds run seeds the land",fx:{war:1,inf:1}},
+  {id:"cough",branch:"mark",name:"Coughbloom",cost:5,desc:"Spores in the throat. Spreads faster",fx:{inf:4,sev:1}},
+  {id:"fever",branch:"mark",name:"Fever Cap",cost:6,desc:"Shamans notice. The land wakes",fx:{sev:4,inf:1}},
+  {id:"fervor",branch:"mark",name:"Mycelial Fervor",cost:10,desc:"The marked walk home instead of rotting",fx:{convert:1,sev:2,inf:2}},
+  {id:"bloom",branch:"mark",name:"Bone Bloom",cost:11,desc:"Ribs split into fruit",fx:{let:5,sev:3}},
+  {id:"rot",branch:"mark",name:"Necrotic Rot",cost:14,desc:"Villages empty",fx:{let:8,sev:4}},
+  {id:"hunger",branch:"mark",name:"Light Hunger",cost:8,desc:"Tribute walks the cords to the hearth",fx:{tribute:1,sev:2,inf:1}},
+  {id:"cold",branch:"craft",name:"Cold Hardening",cost:7,desc:"Lives in Nightwood and cairns",fx:{cold:2}},
+  {id:"heat",branch:"craft",name:"Heat Hardening",cost:7,desc:"Lives in Ember Wastes and the Mouth",fx:{heat:2}},
+  {id:"damp",branch:"craft",name:"Gill Spores",cost:6,desc:"Loves Dewfen and the Coast",fx:{humid:2}},
+  {id:"veil",branch:"craft",name:"Fog Veil",cost:9,desc:"Hides the bloom from rival rites",fx:{stealth:3,sev:-2}},
+  {id:"burst",branch:"craft",name:"Spore Burst",cost:12,desc:"A pulse through every touched land",fx:{burst:1,inf:1}},
 ];
-
-function blankPlague(){
-  const lands = {};
-  REGIONS.forEach(r => {
-    lands[r.id] = { inf:0, dead:0, closed:false, aware:0 };
-  });
-  lands.glen.inf = 40; // spark at the hearth
-  const veins = [];
-  REGIONS.forEach(r => r.links.forEach(nid => {
-    if (r.id < nid) veins.push({ a:r.id, b:nid, w:1, flow:0, grown:false });
-  }));
-  return {
-    dna: 8,
-    inf: 4, sev: 1, let: 0,
-    air:0, water:0, beast:0, war:0,
-    heat:0, cold:0, humid:0, stealth:0,
-    convert:0, tribute:0,
-    evolved: [],
-    lands,
-    veins,
-    caravans: [],
-    cure: 0, cureOn: false,
-    news: "A cough in Ashen Glen. The hearth tastes of mushroom.",
-    won: null
-  };
-}
-
-function climateMul(climate, P){
-  if (climate==="hot") return 0.45 + P.heat*0.28;
-  if (climate==="cold") return 0.45 + P.cold*0.28;
-  if (climate==="humid") return 0.7 + P.humid*0.2;
-  return 1;
-}
-
-let S = null;
-let tickTimer = null;
-let selectedRoom = null;
-let sendPct = 50;
-let battle = null;
-let raf = 0;
+const UNITS = {
+  sporeling:{name:"Sporeling",file:"sporeling",speed:210,atk:8,hp:70},
+  boneguard:{name:"Bone Guard",file:"boneguard",speed:150,atk:12,hp:130},
+  capthrow:{name:"Cap-Thrower",file:"capthrow",speed:180,atk:14,hp:80},
+  veinwalker:{name:"Vein-Walker",file:"veinwalker",speed:250,atk:9,hp:75},
+  convert:{name:"Fervor Convert",file:"convert",speed:190,atk:16,hp:95},
+  seerspark:{name:"Seer-Spark",file:"seerspark",speed:220,atk:11,hp:60,hover:true},
+};
 
 const $ = id => document.getElementById(id);
-function rnd(a,b){ return a + Math.floor(Math.random()*(b-a+1)); }
-function pick(arr){ return arr[rnd(0,arr.length-1)]; }
-function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
-
-/* ---- seeded RNG, noise, graphs (Poisson-ish + Gabriel-ish) ---- */
-function hash32(s){
-  let h = 2166136261;
-  const str = String(s);
-  for (let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return h >>> 0;
-}
-function mulberry(seed){
-  let t = seed >>> 0;
-  return function(){
-    t += 0x6D2B79F5;
-    let x = Math.imul(t ^ (t>>>15), 1|t);
-    x ^= x + Math.imul(x ^ (x>>>7), 61|x);
-    return ((x ^ (x>>>14)) >>> 0) / 4294967296;
-  };
-}
-function valNoise(x,y,seed){
-  const n = Math.sin(x*127.1 + y*311.7 + seed*0.001) * 43758.5453;
-  return n - Math.floor(n);
-}
-function poissonPoints(rng, n, minD, pad){
-  const pts = [];
-  let tries = 0;
-  while (pts.length < n && tries < n*40){
-    tries++;
-    const p = { x: pad + rng()*(1-2*pad), y: pad + rng()*(1-2*pad) };
-    if (pts.every(q => Math.hypot(p.x-q.x,p.y-q.y) >= minD)) pts.push(p);
-  }
-  return pts;
-}
-function gabrielEdges(pts){
-  const edges = [];
-  for (let i=0;i<pts.length;i++) for (let j=i+1;j<pts.length;j++){
-    const mx = (pts[i].x+pts[j].x)/2, my = (pts[i].y+pts[j].y)/2;
-    const r = Math.hypot(pts[i].x-pts[j].x, pts[i].y-pts[j].y)/2;
-    let ok = true;
-    for (let k=0;k<pts.length;k++) if (k!==i && k!==j){
-      if (Math.hypot(pts[k].x-mx, pts[k].y-my) < r-0.001){ ok=false; break; }
-    }
-    if (ok) edges.push([i,j]);
-  }
-  return edges;
-}
-function dijkstra(nodes, edges, blocked, start, goal){
-  const dist = {}, prev = {}, used = new Set();
-  nodes.forEach(id => dist[id] = Infinity);
-  dist[start] = 0;
-  while (used.size < nodes.length){
-    let u = null, best = Infinity;
-    nodes.forEach(id => { if (!used.has(id) && dist[id]<best){ best=dist[id]; u=id; } });
-    if (u==null) break;
-    used.add(u);
-    if (u===goal) break;
-    edges.forEach(e => {
-      if (e.a!==u && e.b!==u) return;
-      const v = e.a===u ? e.b : e.a;
-      if (blocked[v] || blocked[u]) return;
-      const nd = dist[u] + (e.w||1);
-      if (nd < dist[v]){ dist[v]=nd; prev[v]=u; }
-    });
-  }
-  if (dist[goal]===Infinity) return null;
-  const path = [goal];
-  while (path[0]!==start) path.unshift(prev[path[0]]);
-  return path;
-}
-
-const UNITS = {
-  sporeling: { name:"Sporeling", icon:"🍄", speed:0.62, atk:1.00, hp:1.0, tower:1.0, color:"#7dff9a" },
-  boneguard: { name:"Bone Guard", icon:"🦴", speed:0.42, atk:0.85, hp:1.7, tower:0.8, color:"#e8d7b0" },
-  capthrow:  { name:"Cap-Thrower", icon:"🎯", speed:0.50, atk:1.10, hp:0.9, tower:0.45, color:"#ffb347" },
-  veinwalker:{ name:"Vein-Walker", icon:"〰️", speed:0.78, atk:0.90, hp:0.85, tower:1.0, color:"#6ec8ff" },
-  convert:   { name:"Fervor Convert", icon:"🩸", speed:0.55, atk:1.25, hp:1.1, tower:1.0, color:"#c44536" },
-  seerspark: { name:"Seer-Spark", icon:"✨", speed:0.70, atk:0.80, hp:0.7, tower:0.25, color:"#c9a6ff" },
-};
-let sendUnit = "sporeling";
+const rnd = (a,b)=> a+Math.floor(Math.random()*(b-a+1));
+const pick = a => a[rnd(0,a.length-1)];
+const clamp = (n,a,b)=> Math.max(a,Math.min(b,n));
+function hash32(s){ let h=2166136261; s=String(s); for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);} return h>>>0; }
+function mulberry(seed){ let t=seed>>>0; return ()=>{ t+=0x6D2B79F5; let x=Math.imul(t^(t>>>15),1|t); x^=x+Math.imul(x^(x>>>7),61|x); return ((x^(x>>>14))>>>0)/4294967296; }; }
 
 const FACE_CACHE = {};
 function paintPortrait(seed){
   if (FACE_CACHE[seed]) return FACE_CACHE[seed];
   const rng = mulberry(hash32(seed));
-  const c = document.createElement("canvas"); c.width=96; c.height=96;
-  const g = c.getContext("2d");
-  const skin = `hsl(${18+rng()*28}, ${42+rng()*30}%, ${38+rng()*22}%)`;
-  const hair = `hsl(${rng()*360}, ${30+rng()*40}%, ${12+rng()*18}%)`;
-  const glow = [`#ff6a2a`,`#7dff9a`,`#6ec8ff`,`#c9a6ff`,`#ffb347`][Math.floor(rng()*5)];
-  g.fillStyle = "#140c08"; g.fillRect(0,0,96,96);
-  g.fillStyle = glow+"33"; g.beginPath(); g.arc(48,42,40,0,6.28); g.fill();
-  g.fillStyle = skin;
-  g.beginPath(); g.ellipse(48, 50, 22+rng()*4, 26+rng()*3, 0, 0, 6.28); g.fill();
-  g.fillStyle = hair;
-  g.beginPath(); g.ellipse(48, 28+rng()*6, 24, 14, 0, Math.PI, 0); g.fill();
-  if (rng()>0.4){ g.beginPath(); g.arc(48,18,10+rng()*8,0,6.28); g.fillStyle = glow; g.fill(); }
-  g.strokeStyle = "#1a0c08"; g.lineWidth = 1.2;
-  for (let i=0;i<6;i++){
-    g.beginPath();
-    g.moveTo(30+rng()*36, 40+rng()*30);
-    g.quadraticCurveTo(48, 55+rng()*20, 28+rng()*40, 70+rng()*16);
-    g.stroke();
-  }
-  g.fillStyle = glow;
-  g.beginPath(); g.arc(40,48,3,0,6.28); g.arc(56,48,3,0,6.28); g.fill();
-  FACE_CACHE[seed] = c.toDataURL("image/jpeg", 0.72);
-  return FACE_CACHE[seed];
+  const c=document.createElement("canvas"); c.width=96; c.height=96; const g=c.getContext("2d");
+  const glow=["#ff6a2a","#7dff9a","#6ec8ff","#c9a6ff","#ffb347"][Math.floor(rng()*5)];
+  g.fillStyle="#140c08"; g.fillRect(0,0,96,96);
+  g.fillStyle=`hsl(${18+rng()*28},${42+rng()*30}%,${38+rng()*22}%)`;
+  g.beginPath(); g.ellipse(48,50,24,27,0,0,6.28); g.fill();
+  g.fillStyle=`hsl(${rng()*360},${30+rng()*40}%,${12+rng()*18}%)`;
+  g.beginPath(); g.ellipse(48,30,24,14,0,Math.PI,0); g.fill();
+  g.fillStyle=glow; g.beginPath(); g.arc(40,48,3,0,6.28); g.arc(56,48,3,0,6.28); g.fill();
+  FACE_CACHE[seed]=c.toDataURL("image/jpeg",0.7); return FACE_CACHE[seed];
+}
+function faceHTML(d){
+  if (!d) return "";
+  if (d.portrait) return `<img src="${d.portrait}" alt="">`;
+  return `<img src="${paintPortrait(d.faceSeed||d.id)}" alt="">`;
 }
 
-function newDweller(role, forced={}) {
-  const n = pick(NAMES) + " " + pick(["Ashborn","Sporekin","Emberfell","Wilds","Bone"]);
-  const d = {
-    id: "d"+Date.now().toString(36)+rnd(10,99),
-    name: n,
-    icon: pick(ICONS),
-    role: role || pick(["hunter","gatherer","seer","guard"]),
-    brawn: rnd(1,4), sight: rnd(1,4), grit: rnd(1,4), voice: rnd(1,4), craft: rnd(1,4),
-    hp: 100, happy: 70, room: null, xp: 0, faceSeed: null
-  };
-  Object.assign(d, forced);
-  if (!d.portrait) d.faceSeed = d.faceSeed || d.id;
+function blankBloom(){
+  const lands={}; REGIONS.forEach(r=>lands[r.id]={inf:0,dead:0,closed:false,aware:0});
+  lands.glen.inf=40;
+  const veins=[];
+  REGIONS.forEach(r=>r.links.forEach(nid=>{ if(r.id<nid) veins.push({a:r.id,b:nid,w:1,flow:0,grown:false}); }));
+  return {dna:8,inf:4,sev:1,let:0,air:0,water:0,beast:0,war:0,heat:0,cold:0,humid:0,stealth:0,convert:0,tribute:0,
+    evolved:[],lands,veins,caravans:[],cure:0,cureOn:false,news:"A cough in Ashen Glen. The hearth tastes of cap and ash.",won:null};
+}
+function newDweller(role, forced={}){
+  const d={id:"d"+Date.now().toString(36)+rnd(10,99),
+    name:pick(NAMES)+" "+pick(["Ashborn","Sporekin","Emberfell","Wilds","Bone"]),
+    role:role||pick(["hunter","gatherer","seer","guard"]),
+    brawn:rnd(1,4),sight:rnd(1,4),grit:rnd(1,4),voice:rnd(1,4),craft:rnd(1,4),
+    hp:100,happy:70,room:null,xp:0,faceSeed:null};
+  Object.assign(d,forced);
+  if(!d.portrait) d.faceSeed=d.faceSeed||d.id;
   return d;
 }
-
-function blankHold() {
-  const dwellers = [
-    newDweller("chief", { name:"Chief Ashborn", icon:"👑", portrait:"art/chief.jpg", brawn:4, sight:3, grit:5, voice:6, craft:3, happy:80 }),
-    newDweller("hunter", { name:"Thorn Wilds", icon:"🏹", portrait:"art/thorn.jpg", brawn:3, grit:5, sight:4 }),
-    newDweller("gatherer", { name:"Moss Sporekin", icon:"🧺", portrait:"art/moss.jpg", craft:5, voice:3 }),
-    newDweller("seer", { name:"Lumen Emberfell", icon:"🕯️", portrait:"art/lumen.jpg", voice:5, sight:4 }),
+function blankHold(){
+  const dwellers=[
+    newDweller("chief",{name:"Chief Ashborn",portrait:"art/chief.jpg",brawn:4,sight:3,grit:5,voice:6,craft:3,happy:80}),
+    newDweller("hunter",{name:"Thorn Wilds",portrait:"art/thorn.jpg",brawn:3,grit:5,sight:4}),
+    newDweller("gatherer",{name:"Moss Sporekin",portrait:"art/moss.jpg",craft:5,voice:3}),
+    newDweller("seer",{name:"Lumen Emberfell",portrait:"art/lumen.jpg",voice:5,sight:4}),
   ];
-  const floors = [
-    { id:0, kind:"gate", slots:[
-      { id:"g0", type:"watchgate", lv:1, workers:[], ready:0, hp:100 },
-      { id:"g1", type:"hearth", lv:1, workers:[], ready:0, hp:100 },
-      { id:"g2", type:"empty", lv:1, workers:[], ready:0, hp:100 },
+  const floors=[
+    {id:0,kind:"gate",locked:false,slots:[
+      {id:"g0",type:"watchgate",lv:1,workers:[],ready:0},
+      {id:"g1",type:"hearth",lv:1,workers:[],ready:0},
+      {id:"g2",type:"empty",lv:1,workers:[],ready:0},
     ]},
-    { id:1, kind:"cave", slots:[
-      { id:"a0", type:"glowcap", lv:1, workers:[], ready:0, hp:100 },
-      { id:"a1", type:"sporebed", lv:1, workers:[], ready:0, hp:100 },
-      { id:"a2", type:"dewcatcher", lv:1, workers:[], ready:0, hp:100 },
+    {id:1,kind:"cave",locked:false,slots:[
+      {id:"a0",type:"glowcap",lv:1,workers:[],ready:0},
+      {id:"a1",type:"sporebed",lv:1,workers:[],ready:0},
+      {id:"a2",type:"dewcatcher",lv:1,workers:[],ready:0},
     ]},
-    { id:2, kind:"cave", slots:[
-      { id:"b0", type:"den", lv:1, workers:[], ready:0, hp:100 },
-      { id:"b1", type:"empty", lv:1, workers:[], ready:0, hp:100 },
-      { id:"b2", type:"empty", lv:1, workers:[], ready:0, hp:100 },
+    {id:2,kind:"cave",locked:false,slots:[
+      {id:"b0",type:"den",lv:1,workers:[],ready:0},
+      {id:"b1",type:"empty",lv:1,workers:[],ready:0},
+      {id:"b2",type:"empty",lv:1,workers:[],ready:0},
     ]},
-    { id:3, kind:"cave", locked:true, slots:[
-      { id:"c0", type:"empty", lv:1, workers:[], ready:0, hp:100 },
-      { id:"c1", type:"empty", lv:1, workers:[], ready:0, hp:100 },
-      { id:"c2", type:"empty", lv:1, workers:[], ready:0, hp:100 },
-    ]},
-    { id:4, kind:"cave", locked:true, slots:[
-      { id:"d0", type:"empty", lv:1, workers:[], ready:0, hp:100 },
-      { id:"d1", type:"empty", lv:1, workers:[], ready:0, hp:100 },
-      { id:"d2", type:"empty", lv:1, workers:[], ready:0, hp:100 },
+    {id:3,kind:"cave",locked:true,slots:[
+      {id:"c0",type:"empty",lv:1,workers:[],ready:0},
+      {id:"c1",type:"empty",lv:1,workers:[],ready:0},
+      {id:"c2",type:"empty",lv:1,workers:[],ready:0},
     ]},
   ];
-  dwellers[0].room = "g1"; floors[0].slots[1].workers = [dwellers[0].id];
-  dwellers[1].room = "g0"; floors[0].slots[0].workers = [dwellers[1].id];
-  dwellers[2].room = "a1"; floors[1].slots[1].workers = [dwellers[2].id];
-  dwellers[3].room = "a0"; floors[1].slots[0].workers = [dwellers[3].id];
+  dwellers[0].room="g1"; floors[0].slots[1].workers=[dwellers[0].id];
+  dwellers[1].room="g0"; floors[0].slots[0].workers=[dwellers[1].id];
+  dwellers[2].room="a1"; floors[1].slots[1].workers=[dwellers[2].id];
+  dwellers[3].room="a0"; floors[1].slots[0].workers=[dwellers[3].id];
+  return {day:1,t:0,res:{ember:48,food:52,dew:50,spirit:12,bone:80},
+    cap:{ember:90,food:90,dew:90,spirit:40},happiness:72,dwellers,floors,
+    log:["The hearth catches."],warsWon:0,bloom:blankBloom(),form:"sporeling"};
+}
 
-  return {
-    day: 1, t: 0,
-    res: { ember: 48, food: 52, dew: 50, spirit: 12, bone: 80 },
-    cap: { ember: 90, food: 90, dew: 90, spirit: 40 },
-    happiness: 72,
-    dwellers, floors,
-    log: ["The hearth catches. Four souls stand in the dark."],
-    warsWon: 0, unlockedMaps: 1,
-    incident: null,
-    plague: blankPlague(),
-    lastSave: Date.now()
-  };
+let S=null, raf=0, mode="hold", near=null, keys={};
+const G={player:null,plats:[],actors:[],cam:{x:0,y:0},W:1600,H:900,goal:null,region:"glen"};
+
+const IMG={};
+["art/hold.jpg","art/battle.jpg","art/chief.jpg","art/units/sporeling.png","art/units/boneguard.png",
+ "art/units/capthrow.png","art/units/veinwalker.png","art/units/convert.png","art/units/seerspark.png"].forEach(src=>{
+  const im=new Image(); im.src=src; IMG[src]=im;
+});
+function unitImg(k){ return IMG["art/units/"+(UNITS[k]||UNITS.sporeling).file+".png"]; }
+
+function allRooms(){ const o=[]; S.floors.forEach(f=>f.slots.forEach(r=>o.push({floor:f,room:r}))); return o; }
+function roomById(id){ for(const f of S.floors) for(const r of f.slots) if(r.id===id) return r; return null; }
+function popCap(){ let n=6; allRooms().forEach(({room})=>{ if(room.type==="den") n+=4*room.lv; }); return n; }
+function idleDwellers(){ return S.dwellers.filter(d=>!d.room); }
+function worldStats(){
+  let pop=0,inf=0,dead=0;
+  REGIONS.forEach(r=>{ const L=S.bloom.lands[r.id]; pop+=r.pop; inf+=L.inf; dead+=L.dead; });
+  return {pop,inf,dead,healthy:Math.max(0,pop-dead-inf)};
+}
+function regionPct(id){
+  const r=REGIONS.find(x=>x.id===id), L=S.bloom.lands[id];
+  return clamp(L.inf/Math.max(1,r.pop-L.dead),0,1);
 }
 
 function save(){ localStorage.setItem("ashspore_v1", JSON.stringify(S)); }
 function load(){
-  try {
-    const s = JSON.parse(localStorage.getItem("ashspore_v1"));
-    if (s && !s.plague) s.plague = blankPlague();
-    if (s && s.plague && !s.plague.veins) {
-      const p = blankPlague();
-      s.plague.veins = p.veins;
-      s.plague.caravans = [];
-    }
-    if (s && s.dwellers) {
-      s.dwellers.forEach(d => { if (!d.portrait && !d.faceSeed) d.faceSeed = d.id; });
-    }
-    if (s && s.dwellers) {
-      const port = {
-        "Chief Ashborn":"art/chief.jpg",
-        "Thorn Wilds":"art/thorn.jpg",
-        "Moss Sporekin":"art/moss.jpg",
-        "Lumen Emberfell":"art/lumen.jpg"
-      };
-      s.dwellers.forEach(d => { if (port[d.name]) d.portrait = port[d.name]; });
-    }
+  try{
+    const s=JSON.parse(localStorage.getItem("ashspore_v1"));
+    if(!s) return null;
+    if(!s.bloom) s.bloom = s.plague || blankBloom();
+    if(s.bloom && !s.bloom.veins) s.bloom.veins=blankBloom().veins;
+    if(!s.form) s.form="sporeling";
     return s;
-  } catch(e){ return null; }
+  }catch(e){ return null; }
 }
 
-function allRooms(){
-  const out = [];
-  S.floors.forEach(f => f.slots.forEach(r => out.push({floor:f, room:r})));
-  return out;
-}
-function roomById(id){
-  for (const f of S.floors) for (const r of f.slots) if (r.id===id) return r;
-  return null;
-}
-function popCap(){
-  let n = 6;
-  allRooms().forEach(({room}) => { if (room.type==="den") n += 4 * room.lv; });
-  return n;
-}
-function defense(){
-  let d = 4;
-  allRooms().forEach(({room}) => {
-    if (room.type==="watchgate") {
-      const wr = room.workers.map(id => S.dwellers.find(x=>x.id===id)).filter(Boolean);
-      d += 8*room.lv + wr.reduce((a,w)=>a+w.grit,0);
-    }
-  });
-  return d;
-}
-function idleDwellers(){ return S.dwellers.filter(d => !d.room); }
+function toast(t){ const el=$("toast"); el.textContent=t; el.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>el.style.display="none",2000); }
+function pushLog(t){ S.log.unshift("Day "+S.day+" · "+t); S.log=S.log.slice(0,40); }
 
 function consumeAndProduce(dt){
-  const pop = S.dwellers.length;
-  S.res.food = clamp(S.res.food - pop * 0.035 * dt, 0, S.cap.food);
-  S.res.dew  = clamp(S.res.dew  - pop * 0.032 * dt, 0, S.cap.dew);
-  const roomsOn = allRooms().filter(({room,floor}) => room.type!=="empty" && !floor.locked).length;
-  S.res.ember = clamp(S.res.ember - roomsOn * 0.018 * dt, 0, S.cap.ember);
-
-  if (S.res.food < 1 || S.res.dew < 1) S.happiness = Math.max(10, S.happiness - 0.08*dt);
-  if (S.res.ember < 1) S.happiness = Math.max(10, S.happiness - 0.1*dt);
-  else if (S.res.food>20 && S.res.dew>20) S.happiness = Math.min(100, S.happiness + 0.02*dt);
-
-  allRooms().forEach(({room, floor}) => {
-    if (floor.locked || room.type==="empty") return;
-    const def = ROOM_DEFS[room.type];
-    if (!def.prod) return;
-    const wr = room.workers.map(id => S.dwellers.find(x=>x.id===id)).filter(Boolean);
-    const stat = wr.reduce((a,w)=>a+(w[def.stat]||1), 0);
-    const dark = S.res.ember < 1 ? 0.35 : 1;
-    const hap = 0.7 + S.happiness/200;
-    room.ready += (def.base * room.lv + stat*0.35) * dark * hap * dt;
+  const pop=S.dwellers.length;
+  S.res.food=clamp(S.res.food-pop*0.035*dt,0,S.cap.food);
+  S.res.dew=clamp(S.res.dew-pop*0.032*dt,0,S.cap.dew);
+  if(S.res.food<1) S.happiness=Math.max(5,S.happiness-0.4*dt);
+  else S.happiness=Math.min(100,S.happiness+0.05*dt);
+  allRooms().forEach(({room,floor})=>{
+    if(floor.locked) return;
+    const def=ROOM_DEFS[room.type]; if(!def||!def.prod) return;
+    const wr=room.workers.map(id=>S.dwellers.find(d=>d.id===id)).filter(Boolean);
+    const stat=def.stat||"craft";
+    const bonus=wr.reduce((a,d)=>a+(d[stat]||1),0);
+    room.ready=Math.min(20,(room.ready||0)+(def.base*room.lv*(0.35+bonus*0.12))*dt*0.12);
   });
-
-  if (!S.incident && Math.random() < 0.004*dt) startIncident();
-  tickPlague(dt);
-
-  const nursery = allRooms().find(({room})=>room.type==="nursery" && room.workers.length>=2);
-  if (nursery && S.dwellers.length < popCap() && Math.random() < 0.002*dt) {
-    const baby = newDweller("youth", { icon:"🧒", portrait:"art/moss.jpg", brawn:1, sight:1, grit:1, voice:2, craft:1, name: pick(NAMES)+" Newborn" });
-    S.dwellers.push(baby);
-    pushLog(baby.name + " draws first breath in the pairing hollow.");
-    toast("A child of the hold is born.");
-  }
 }
 
-function collectRoom(room){
-  const def = ROOM_DEFS[room.type];
-  if (!def.prod || room.ready < 8) return;
-  const amt = Math.floor(room.ready);
-  room.ready = 0;
-  S.res[def.prod] = clamp(S.res[def.prod] + amt, 0, S.cap[def.prod] || 99);
-  if (Math.random()<0.35) S.res.bone += rnd(1,4);
-  room.workers.forEach(id => { const d=S.dwellers.find(x=>x.id===id); if(d) d.xp += 1; });
-  renderHold();
+function climateMul(c,P){
+  if(c==="hot") return 0.45+P.heat*0.28;
+  if(c==="cold") return 0.45+P.cold*0.28;
+  if(c==="humid") return 0.7+P.humid*0.2;
+  return 1;
 }
-
-function startIncident(){
-  const kinds = [
-    { id:"raid", title:"Wild-raiders at the gate", text:"Ash-painted savages beat the Watchgate. Staff it or lose bone and blood." },
-    { id:"rot", title:"Spore-rot", text:"The beds blacken. Food stores bleed unless a crafter tends them." },
-    { id:"whisper", title:"The Old Ones whisper", text:"Happiness frays. An altar or hearth voice can hold the tribe." },
-    { id:"drought", title:"Dew dries", text:"The catchers cough dust. Dew drains until the incident ends." },
-    { id:"bloomback", title:"Bloom turns inward", text:"High lethality bites the hold. A posted seer at the Altar slows it." },
-  ];
-  S.incident = { ...pick(kinds), t: 28 };
-  pushLog(S.incident.title + ".");
-  toast(S.incident.title);
-}
-
-function resolveIncident(dt){
-  if (!S.incident) return;
-  S.incident.t -= dt;
-  if (S.incident.id==="raid") {
-    if (Math.random()<0.08*dt) {
-      const dmg = Math.max(0, rnd(4,12) - defense()/8);
-      if (dmg>0) {
-        const vic = pick(S.dwellers);
-        vic.hp = Math.max(0, vic.hp - dmg*4);
-        S.res.bone = Math.max(0, S.res.bone - rnd(2,6));
-        if (vic.hp<=0) {
-          pushLog(vic.name + " falls at the gate.");
-          unassign(vic);
-          S.dwellers = S.dwellers.filter(d=>d.id!==vic.id);
-        }
-      }
-    }
-  }
-  if (S.incident.id==="rot") S.res.food = Math.max(0, S.res.food - 0.12*dt);
-  if (S.incident.id==="drought") S.res.dew = Math.max(0, S.res.dew - 0.12*dt);
-  if (S.incident.id==="whisper") S.happiness = Math.max(8, S.happiness - 0.15*dt);
-  if (S.incident.id==="bloomback") {
-    const altar = allRooms().some(({room})=>room.type==="altar" && room.workers.length);
-    if (!altar) {
-      S.dwellers.forEach(d => d.hp = Math.max(20, d.hp - 0.2*dt));
-      S.happiness = Math.max(10, S.happiness - 0.1*dt);
-    }
-  }
-  if (S.incident.t <= 0) {
-    pushLog(S.incident.title + " fades.");
-    S.incident = null;
-  }
-}
-
-function unassign(d){
-  if (!d.room) return;
-  const r = roomById(d.room);
-  if (r) r.workers = r.workers.filter(id=>id!==d.id);
-  d.room = null;
-}
-function assign(d, room){
-  const def = ROOM_DEFS[room.type];
-  if (!def.slots) return toast("No posts in that room.");
-  if (room.workers.length >= def.slots + (room.lv-1)) return toast("Room is full.");
-  unassign(d);
-  d.room = room.id;
-  room.workers.push(d.id);
-}
-
-function pushLog(t){ S.log.unshift("Day "+S.day+": "+t); S.log = S.log.slice(0,40); }
-
-function worldStats(){
-  let pop=0, inf=0, dead=0;
-  REGIONS.forEach(r => {
-    const L = S.plague.lands[r.id];
-    pop += r.pop;
-    inf += Math.min(L.inf, r.pop - L.dead);
-    dead += L.dead;
-  });
-  return { pop, inf, dead, healthy: Math.max(0, pop-inf-dead) };
-}
-
-function tickPlague(dt){
-  const P = S.plague;
-  if (!P || P.won) return;
-  let newInf = 0;
-  REGIONS.forEach(r => {
-    const L = P.lands[r.id];
-    const alive = Math.max(0, r.pop - L.dead);
-    const infected = Math.min(L.inf, alive);
-    const healthy = Math.max(0, alive - infected);
-    if (alive <= 0) return;
-
-    const climate = climateMul(r.climate, P);
-    const close = L.closed ? 0.35 : 1;
-    const localRate = (0.012 + P.inf*0.004) * climate * close;
-    const spreadLocal = infected * (healthy/Math.max(1,alive)) * localRate * dt;
-    L.inf = Math.min(alive, L.inf + spreadLocal);
-    newInf += spreadLocal;
-
-    const kill = infected * (P.let * 0.0018) * dt;
-    const convertKeep = P.convert ? kill * 0.45 : 0;
-    L.dead = Math.min(r.pop, L.dead + (kill - convertKeep));
-    L.inf = Math.max(0, L.inf - kill + convertKeep*0.2);
-
-    // awareness
-    L.aware = Math.min(100, L.aware + (P.sev*0.08 - P.stealth*0.06) * (infected/Math.max(1,alive)) * dt * 8);
-    if (!L.closed && L.aware > 55 && infected/alive > 0.12) {
-      L.closed = true;
-      P.news = r.name + " seals its roads.";
-      pushLog(r.name + " seals the mycelium roads.");
-    }
-
-    // neighbor jump along living veins
-    (P.veins||[]).filter(v => v.a===r.id || v.b===r.id).forEach(v => {
-      const nid = v.a===r.id ? v.b : v.a;
-      const N = P.lands[nid];
-      const dest = REGIONS.find(x=>x.id===nid);
-      if (!dest || !N) return;
-      const destAlive = Math.max(1, dest.pop - N.dead);
-      if (N.inf > destAlive*0.98) return;
-      let chance = 0.0008 * P.inf * climateMul(dest.climate, P) * (v.grown?1.6:1);
-      if (P.air) chance += 0.0012 * P.air;
-      if (P.water && (r.climate==="humid" || dest.climate==="humid")) chance += 0.0014 * P.water;
-      if (P.beast) chance += 0.001 * P.beast;
-      if (L.closed || N.closed) chance *= 0.4;
-      if (infected > 80 && Math.random() < chance * dt) {
-        const seed = 8 + P.inf*2;
-        if (N.inf <= 0) {
-          P.dna += 3;
-          P.news = "First cough in " + dest.name + ".";
-          pushLog("Ashspore seeds " + dest.name + ".");
-          toast("New land infected: " + dest.name);
-        }
-        N.inf = Math.min(destAlive, N.inf + seed);
-      }
+function tickBloom(dt){
+  const P=S.bloom; if(!P||P.won) return;
+  REGIONS.forEach(r=>{
+    const L=P.lands[r.id]; const alive=Math.max(1,r.pop-L.dead); const inf=Math.min(L.inf,alive);
+    const rate=(0.012+P.inf*0.004)*climateMul(r.climate,P)*(L.closed?0.35:1);
+    L.inf=Math.min(alive,L.inf+inf*(alive-inf)/alive*rate*dt);
+    const kill=inf*(P.let*0.0018)*dt;
+    L.dead=Math.min(r.pop,L.dead+kill*(P.convert?0.55:1));
+    L.inf=Math.max(0,L.inf-kill);
+    L.aware=Math.min(100,L.aware+(P.sev*0.08-P.stealth*0.06)*(inf/alive)*dt*8);
+    if(!L.closed && L.aware>55 && inf/alive>0.12){ L.closed=true; P.news=r.name+" seals its roads."; }
+    (P.veins||[]).filter(v=>v.a===r.id||v.b===r.id).forEach(v=>{
+      const nid=v.a===r.id?v.b:v.a; const N=P.lands[nid]; const dest=REGIONS.find(x=>x.id===nid);
+      if(!dest||N.inf>dest.pop*0.9) return;
+      let ch=0.0008*P.inf*climateMul(dest.climate,P)*(v.grown?1.6:1);
+      if(P.air) ch+=0.0012*P.air; if(L.closed||N.closed) ch*=0.4;
+      if(inf>80 && Math.random()<ch*dt){ if(N.inf<=0){ P.dna+=3; P.news="First cough in "+dest.name+"."; } N.inf+=8+P.inf*2; }
     });
   });
-
-  if (newInf > 4) P.dna += Math.min(2.5, newInf/90) * dt;
-  flowMycelium(dt);
-
-  // convert births extra tribe chance
-  if (P.convert && S.dwellers.length < popCap() && Math.random() < 0.0015*dt) {
-    const d = newDweller("converted", { icon:"🍄" });
-    S.dwellers.push(d);
-    pushLog(d.name + " walks in already blooming.");
+  if(P.tribute){ const w=worldStats(); S.res.food=clamp(S.res.food+w.inf/18000*dt,0,S.cap.food); S.res.bone+=w.inf/22000*dt; }
+  if(P.convert && S.dwellers.length<popCap() && Math.random()<0.0015*dt){
+    const d=newDweller("converted"); S.dwellers.push(d); pushLog(d.name+" walks in already blooming.");
   }
-
-  const { pop, inf, dead, healthy } = worldStats();
-  const infPct = inf / Math.max(1, pop-dead);
-
-  if (!P.cureOn && P.sev >= 6 && infPct > 0.08) {
-    P.cureOn = true;
-    P.news = "Shamans of the Mouth begin a cleanse rite.";
-    pushLog("The cleanse has begun.");
-    toast("A cleanse rite has begun.");
+  const w=worldStats(); const infPct=w.inf/Math.max(1,w.pop-w.dead);
+  if(!P.cureOn && P.sev>=6 && infPct>0.08){ P.cureOn=true; P.news="Shamans of the Mouth begin a rival rite."; toast("A rival rite has begun."); }
+  if(P.cureOn && !P.won){
+    P.cure=Math.min(100,P.cure+Math.max(0.08,(P.sev*0.35+infPct*4)-P.stealth*0.7)*dt*0.12);
+    if(P.cure>=100){ P.won="cure"; P.news="The rival rite burns the bloom back."; showBloomEnd(false); }
   }
-  if (P.cureOn && P.won===null) {
-    const speed = Math.max(0.08, (P.sev*0.35 + infPct*4) - P.stealth*0.7);
-    P.cure = Math.min(100, P.cure + speed * dt * 0.12);
-    if (P.cure >= 100) {
-      P.won = "cure";
-      P.news = "The cleanse burns the strain back to the hearth.";
-      pushLog("DEFEAT: the cleanse completes.");
-      showPlagueEnd(false);
-    }
-  }
-
-  if (P.won===null && healthy < pop*0.02 && inf + dead > pop*0.9) {
-    P.won = "spread";
-    P.news = "Every land wears your bloom.";
-    pushLog("VICTORY: the world is Ashspore.");
-    S.res.bone += 80; S.res.spirit = clamp(S.res.spirit+20,0,S.cap.spirit);
-    showPlagueEnd(true);
-  }
-
-  if (Math.random() < 0.012*dt) {
-    const ticks = [
-      "Hunters speak of coughing elk.",
-      "A child dreams of gills.",
-      "Bone-priests count the dead wrong.",
-      "Dew tastes sweet, then metal.",
-      "Crow Pass fires its beacons.",
-    ];
-    if (Math.random()<0.5) P.news = pick(ticks);
+  if(!P.won && w.healthy<w.pop*0.02 && w.inf+w.dead>w.pop*0.9){
+    P.won="spread"; P.news="Every land wears your bloom."; S.res.bone+=80; showBloomEnd(true);
   }
 }
 
-function evolveStrain(id){
-  const P = S.plague;
-  const ev = EVOLUTIONS.find(e=>e.id===id);
-  if (!ev) return;
-  if (P.evolved.includes(id)) return toast("Already in the strain.");
-  if (P.dna < ev.cost) return toast("Need more DNA.");
-  P.dna -= ev.cost;
-  P.evolved.push(id);
-  const f = ev.fx;
-  if (f.inf) P.inf += f.inf;
-  if (f.sev) P.sev = Math.max(0, P.sev + f.sev);
-  if (f.let) P.let += f.let;
-  if (f.air) P.air += f.air;
-  if (f.water) P.water += f.water;
-  if (f.beast) P.beast += f.beast;
-  if (f.war) P.war += f.war;
-  if (f.heat) P.heat += f.heat;
-  if (f.cold) P.cold += f.cold;
-  if (f.humid) P.humid += f.humid;
-  if (f.stealth) P.stealth += f.stealth;
-  if (f.convert) P.convert += f.convert;
-  if (f.tribute) P.tribute += f.tribute;
-  if (f.burst) {
-    REGIONS.forEach(r => {
-      const L = P.lands[r.id];
-      if (L.inf > 0) L.inf = Math.min(r.pop-L.dead, L.inf + 220 + P.inf*20);
-    });
-    toast("Spore Burst across touched lands.");
-  }
-  pushLog("Evolved " + ev.name + ".");
-  openStrain();
-}
-
-function showPlagueEnd(win){
-  $("modal").className = "on";
-  $("modal").innerHTML = win
-    ? `<div class="card"><h2>THE WORLD WEARS YOU</h2><p>Every region coughs your name. Tribute and converts walk the roads to the hearth. The hold still needs food. The strain is eternal.</p><button class="bigbtn" id="okend">KEEP THE FIRE</button></div>`
-    : `<div class="card"><h2>THE CLEANSE</h2><p>Rival shamans finish the rite. Infection in every land is cut down. Evolve Fog Veil sooner. Seed more lands before severity wakes them.</p><button class="bigbtn" id="okend">TEND THE ASH</button></div>`;
-  $("okend").onclick = () => {
-    $("modal").className = "";
-    if (!win) {
-      REGIONS.forEach(r => { S.plague.lands[r.id].inf *= 0.08; });
-      S.plague.cure = 0; S.plague.cureOn = false; S.plague.won = null;
-      S.plague.dna = Math.max(4, S.plague.dna);
-      S.happiness = Math.max(20, S.happiness-15);
-    }
+function showBloomEnd(win){
+  $("modal").className="on";
+  $("modal").innerHTML = `<div class="card"><h2>${win?"THE LANDS WEAR YOU":"THE RIVAL RITE"}</h2>
+    <p>${win?"Every region coughs your name. Tribute walks home.":"Rival shamans cut the bloom down. Grow Fog Veil sooner."}</p>
+    <button class="bigbtn" id="okend">KEEP THE FIRE</button></div>`;
+  $("okend").onclick=()=>{
+    $("modal").className="";
+    if(!win){ REGIONS.forEach(r=>S.bloom.lands[r.id].inf*=0.08); S.bloom.cure=0; S.bloom.cureOn=false; S.bloom.won=null; }
   };
 }
 
-function regionInfectPct(id){
-  const r = REGIONS.find(x=>x.id===id);
-  const L = S.plague.lands[id];
-  const alive = Math.max(1, r.pop - L.dead);
-  return clamp(L.inf / alive, 0, 1);
-}
-
-function networkEdges(){
-  return (S.plague.veins||[]).map(v => ({ a:v.a, b:v.b, w: 1 / (1+(v.flow||0)/8) + (v.grown?0.15:0) }));
-}
-function flowMycelium(dt){
-  const P = S.plague;
-  if (!P.veins) return;
-  P.veins.forEach(v => v.flow = Math.max(0, (v.flow||0)*0.92));
-  const ids = REGIONS.map(r=>r.id);
-  const blocked = {};
-  REGIONS.forEach(r => {
-    const L = P.lands[r.id];
-    blocked[r.id] = !!(L.closed && regionInfectPct(r.id) < 0.2);
-  });
-  let foodIn = 0, boneIn = 0, spiritIn = 0;
-  REGIONS.forEach(r => {
-    if (r.id==="glen") return;
-    const pct = regionInfectPct(r.id);
-    if (pct < 0.04) return;
-    const path = dijkstra(ids, networkEdges(), blocked, r.id, "glen");
-    if (!path) return;
-    const push = pct * (0.35 + (P.tribute?0.8:0.2)) * dt;
-    for (let i=0;i<path.length-1;i++){
-      const a=path[i], b=path[i+1];
-      const vein = P.veins.find(v => (v.a===a&&v.b===b)||(v.a===b&&v.b===a));
-      if (vein) vein.flow = Math.min(12, (vein.flow||0) + push);
-    }
-    foodIn += push * 1.1;
-    boneIn += push * 0.45;
-    spiritIn += push * 0.08;
-    if (Math.random() < 0.04*dt && pct>0.15) {
-      P.caravans = P.caravans || [];
-      P.caravans.push({ path, i:0, t:0, kind: pick(["sporeling","convert","veinwalker"]) });
-    }
-  });
-  S.res.food = clamp(S.res.food + foodIn, 0, S.cap.food);
-  S.res.bone += boneIn;
-  S.res.spirit = clamp(S.res.spirit + spiritIn, 0, S.cap.spirit);
-  P.caravans = (P.caravans||[]).filter(c => {
-    c.t += dt*0.35;
-    if (c.t>=1){ c.t=0; c.i++; }
-    return c.i < c.path.length-1;
-  });
-}
-function growVein(a,b){
-  if (a===b) return toast("Pick two different lands.");
-  const P = S.plague;
-  const exists = P.veins.find(v => (v.a===a&&v.b===b)||(v.a===b&&v.b===a));
-  if (exists && exists.grown) return toast("That vein already lives.");
-  if (regionInfectPct(a)<0.05 || regionInfectPct(b)<0.05) return toast("Both lands must carry the bloom.");
-  if (P.dna < 6) return toast("Need 6 DNA to grow a vein.");
-  P.dna -= 6;
-  if (exists) { exists.grown = true; exists.w = 0.6; }
-  else P.veins.push({ a,b, w:0.6, flow:1, grown:true });
-  pushLog("Grew a living vein "+a+" ↔ "+b+".");
-  toast("A new cord thickens under the earth.");
-  openStrain();
-}
-
-function genBattleMap(regionId, threat){
-  const rng = mulberry(hash32(regionId + ":" + (S.day||1) + ":" + (S.warsWon||0)));
-  const count = 6 + threat*2;
-  const pts = poissonPoints(rng, count, 0.16, 0.1);
-  if (pts.length<4){
-    pts.push({x:0.16,y:0.5},{x:0.84,y:0.5},{x:0.5,y:0.28},{x:0.5,y:0.72});
-  }
-  pts.sort((a,b)=>a.x-b.x);
-  pts[0].x = Math.min(pts[0].x, 0.18);
-  pts[pts.length-1].x = Math.max(pts[pts.length-1].x, 0.82);
-  const edges = gabrielEdges(pts);
-  const types = ["village","village","tower","forge","village"];
-  const nodes = pts.map((p,i) => {
-    let owner = "neutral";
-    if (i===0) owner="player";
-    if (i===pts.length-1) owner="enemy";
-    if (i===1 && rng()>0.5) owner="player";
-    if (i>=pts.length-2 && rng()>0.45) owner="enemy";
-    const type = i===0||i===pts.length-1 ? "village" : types[Math.floor(rng()*types.length)];
-    const n = 8 + Math.floor(rng()*10) + (owner==="enemy"? threat*3:0);
-    return { id:i, x:p.x, y:p.y, type, owner, n, lv: 1+Math.floor(rng()*Math.min(2,threat)) };
-  });
-  return { nodes, edges };
-}
-
-function zoomAtlas(x,y){
-  const el = $("atlas"); if (!el) return;
-  el.style.transform = `translate(${(50-x)*1.15}%, ${(50-y)*1.15}%) scale(2.15)`;
-}
-function resetAtlas(){
-  const el = $("atlas"); if (!el) return;
-  el.style.transform = "none";
-}
-let fogTimer = 0;
-function startFog(){
-  const c = $("fog"); if (!c) return;
-  const wrap = $("worldwrap");
-  c.width = wrap.clientWidth; c.height = wrap.clientHeight;
-  const ctx = c.getContext("2d");
-  const parts = Array.from({length: 36}, () => ({
-    x: Math.random()*c.width, y: Math.random()*c.height,
-    r: 8+Math.random()*18, v: 6+Math.random()*14, a: 0.08+Math.random()*0.12
-  }));
-  cancelAnimationFrame(fogTimer);
-  const step = () => {
-    if (!$("fog")) return;
-    ctx.clearRect(0,0,c.width,c.height);
-    parts.forEach(p => {
-      p.x += Math.sin(p.y*0.02)*0.4; p.y -= p.v*0.016;
-      if (p.y < -20){ p.y = c.height+10; p.x = Math.random()*c.width; }
-      ctx.fillStyle = `rgba(125,255,154,${p.a})`;
-      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,6.28); ctx.fill();
+/* ---------- 2.5D platformer ---------- */
+function rect(x,y,w,h,tag,meta){ return {x,y,w,h,tag:tag||"plat",meta:meta||null}; }
+function buildHoldLevel(){
+  const plats=[], actors=[];
+  const W=1680, floorH=150, ground=820;
+  plats.push(rect(0,ground,W,80,"floor"));
+  plats.push(rect(780,120,70,ground-120,"ladder"));
+  S.floors.forEach((f,fi)=>{
+    const y = ground - 8 - fi*floorH;
+    if(f.locked) return;
+    f.slots.forEach((room,si)=>{
+      const x = 80 + si*420;
+      plats.push(rect(x,y,360,22,"room",{room,floor:f}));
+      const wr=room.workers.map(id=>S.dwellers.find(d=>d.id===id)).filter(Boolean);
+      wr.forEach((d,i)=> actors.push({kind:"npc",d,x:x+70+i*70,y:y,facing:1,form:d.role==="chief"?"boneguard":"sporeling"}));
     });
-    if (S && S.plague && S.plague.veins){
-      S.plague.veins.forEach(v => {
-        const A = REGIONS.find(r=>r.id===v.a), B = REGIONS.find(r=>r.id===v.b);
-        if (!A||!B) return;
-        ctx.strokeStyle = v.grown ? "rgba(255,180,70,0.7)" : `rgba(125,255,154,${0.15+Math.min(0.5,(v.flow||0)/10)})`;
-        ctx.lineWidth = 1.5 + Math.min(4, v.flow||0);
-        ctx.beginPath();
-        ctx.moveTo(A.x/100*c.width, A.y/100*c.height);
-        ctx.lineTo(B.x/100*c.width, B.y/100*c.height);
-        ctx.stroke();
-      });
-      (S.plague.caravans||[]).forEach(car => {
-        const a = REGIONS.find(r=>r.id===car.path[car.i]);
-        const b = REGIONS.find(r=>r.id===car.path[car.i+1]);
-        if (!a||!b) return;
-        const x = (a.x + (b.x-a.x)*car.t)/100*c.width;
-        const y = (a.y + (b.y-a.y)*car.t)/100*c.height;
-        ctx.fillStyle = (UNITS[car.kind]||UNITS.sporeling).color;
-        ctx.beginPath(); ctx.arc(x,y,4,0,6.28); ctx.fill();
-      });
-    }
-    fogTimer = requestAnimationFrame(step);
-  };
-  fogTimer = requestAnimationFrame(step);
+  });
+  plats.push(rect(40,ground-8,90,90,"gate"));
+  plats.push(rect(W-160,ground-8,90,90,"altar"));
+  G.W=W; G.H=960; G.plats=plats; G.actors=actors; G.goal=null;
+  G.player={x:520,y:ground-8,vx:0,vy:0,w:28,h:52,on:false,facing:1,hp:100,form:S.form||"sporeling",inv:0};
 }
 
-function toast(t){
-  const el = $("toast"); el.textContent = t; el.style.display = "block";
-  clearTimeout(toast._t); toast._t = setTimeout(()=> el.style.display="none", 2200);
+function buildWilds(regionId){
+  const rng=mulberry(hash32(regionId+":"+S.day+":"+S.warsWon));
+  const W=3200, ground=780;
+  const plats=[rect(0,ground,W,90,"floor")];
+  for(let i=0;i<18;i++){
+    const x=180+i*160+rng()*40, y=ground-80-Math.floor(rng()*4)*70, w=90+rng()*80;
+    plats.push(rect(x,y,w,18,"plat"));
+  }
+  const actors=[];
+  const kinds=Object.keys(UNITS);
+  for(let i=0;i<8;i++){
+    actors.push({kind:"foe",form:kinds[Math.floor(rng()*kinds.length)],x:500+i*280,y:ground,facing:-1,hp:40+S.bloom.inf,patrol:500+i*280,inv:0});
+  }
+  G.W=W; G.H=920; G.plats=plats; G.actors=actors; G.goal=rect(W-140,ground-8,80,80,"shrine");
+  G.region=regionId;
+  G.player={x:80,y:ground-8,vx:0,vy:0,w:28,h:52,on:false,facing:1,hp:UNITS[S.form].hp,form:S.form,inv:0};
+}
+
+function aabb(a,b){ return a.x < b.x+b.w && a.x+a.w > b.x && a.y-a.h < b.y && a.y > b.y-b.h; }
+function standingOn(p, plat){
+  return p.x+p.w>plat.x && p.x<plat.x+plat.w && p.y<=plat.y+6 && p.y>=plat.y-8 && p.vy>=0;
+}
+
+function stepPhys(p, dt){
+  const U=UNITS[p.form]||UNITS.sporeling;
+  const spd = U.speed;
+  p.vx = 0;
+  if(keys.l) { p.vx=-spd; p.facing=-1; }
+  if(keys.r) { p.vx=spd; p.facing=1; }
+  if(keys.j && p.on){ p.vy=-620; p.on=false; keys.j=false; }
+  p.vy += 1800*dt;
+  p.x += p.vx*dt;
+  p.y += p.vy*dt;
+  p.on=false;
+  G.plats.forEach(pl=>{
+    if(pl.tag==="ladder"){
+      if(p.x+p.w>pl.x && p.x<pl.x+pl.w && p.y>pl.y && p.y-p.h<pl.y+pl.h){
+        if(keys.j){ p.vy=-220; p.on=true; }
+        p.vy=Math.min(p.vy,80);
+      }
+      return;
+    }
+    if(standingOn(p,pl)){ p.y=pl.y; p.vy=0; p.on=true; }
+  });
+  p.x=clamp(p.x,8,G.W-36);
+  if(p.y>G.H){ p.y=780; p.vy=0; p.hp-=15; }
+  if(p.inv>0) p.inv-=dt;
+}
+
+function stepWorld(dt){
+  const p=G.player;
+  stepPhys(p,dt);
+  G.actors.forEach(a=>{
+    if(a.kind==="foe"){
+      a.x += a.facing*50*dt;
+      if(Math.abs(a.x-a.patrol)>90) a.facing*=-1;
+      const hit={x:a.x,y:a.y,w:28,h:50};
+      if(p.inv<=0 && aabb({x:p.x,y:p.y,w:p.w,h:p.h},hit)){
+        p.hp-=8; p.inv=0.6; p.vx=a.facing*200; p.vy=-240;
+      }
+    }
+  });
+  near=null;
+  if(mode==="hold"){
+    G.plats.forEach(pl=>{
+      if((pl.tag==="room"||pl.tag==="gate"||pl.tag==="altar") && Math.abs(p.x-(pl.x+pl.w/2))<90 && Math.abs(p.y-pl.y)<40)
+        near=pl;
+    });
+  } else {
+    if(G.goal && Math.abs(p.x-(G.goal.x+40))<70) near=G.goal;
+  }
+  const pr=$("prompt");
+  if(near){
+    pr.style.display="block";
+    pr.textContent = near.tag==="room" ? "ACT · "+(ROOM_DEFS[near.meta.room.type]||{}).name : near.tag==="gate"?"ACT · enter the wilds":near.tag==="altar"?"ACT · tend the bloom":"ACT · claim the shrine";
+  } else pr.style.display="none";
+
+  G.cam.x = clamp(p.x - innerWidth*0.35, 0, G.W-innerWidth);
+  G.cam.y = clamp(p.y - innerHeight*0.62, 0, G.H-innerHeight);
+}
+
+function doAct(){
+  if(!near){
+    if(mode==="wilds") swing();
+    return;
+  }
+  if(near.tag==="room") openRoom(near.meta.room);
+  else if(near.tag==="gate") openWildsPick();
+  else if(near.tag==="altar") openBloom();
+  else if(near.tag==="shrine") winWilds();
+}
+
+function swing(){
+  const p=G.player; const U=UNITS[p.form];
+  const box={x:p.facing>0?p.x+p.w:p.x-36,y:p.y,w:36,h:p.h};
+  G.actors.forEach(a=>{
+    if(a.kind!=="foe"||a.hp<=0) return;
+    if(aabb(box,{x:a.x,y:a.y,w:28,h:50})){ a.hp-=U.atk; a.x+=p.facing*30; }
+  });
+  G.actors=G.actors.filter(a=>a.kind!=="foe"||a.hp>0);
+}
+
+function drawBillboard(ctx, img, x, y, facing, form, enemy, t){
+  const hover = (UNITS[form]||{}).hover ? Math.sin(t*5)*6 : 0;
+  const bob = Math.sin(t*10)*2;
+  const w=54, h=78;
+  ctx.save();
+  ctx.fillStyle="rgba(0,0,0,.4)";
+  ctx.beginPath(); ctx.ellipse(x,y+4,16,5,0,0,6.28); ctx.fill();
+  ctx.translate(x, y-h+8+bob-hover);
+  ctx.scale(facing<0?-1:1,1);
+  if(img && img.complete && img.naturalWidth){
+    if(enemy) ctx.filter="hue-rotate(210deg) saturate(1.2)";
+    ctx.drawImage(img, -w/2, 0, w, h);
+    ctx.filter="none";
+  } else {
+    ctx.fillStyle=enemy?"#8b4dff":"#ff8a3d";
+    ctx.fillRect(-10,20,20,40); ctx.beginPath(); ctx.arc(0,16,14,0,6.28); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function draw(){
+  const c=$("stage"), ctx=c.getContext("2d");
+  const w=c.width, h=c.height, dpr=devicePixelRatio||1;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const vw=w/dpr, vh=h/dpr;
+  ctx.fillStyle="#0b0706"; ctx.fillRect(0,0,vw,vh);
+  const bg = mode==="hold"?IMG["art/hold.jpg"]:IMG["art/battle.jpg"];
+  if(bg && bg.complete){
+    ctx.globalAlpha=0.55;
+    ctx.drawImage(bg, -G.cam.x*0.25, -G.cam.y*0.1, vw+200, vh+80);
+    ctx.globalAlpha=1;
+  }
+  ctx.save();
+  ctx.translate(-G.cam.x, -G.cam.y);
+  // depth floor
+  G.plats.forEach(pl=>{
+    if(pl.tag==="ladder"){
+      ctx.fillStyle="#5a3a22"; ctx.fillRect(pl.x+20,pl.y,12,pl.h);
+      for(let y=pl.y;y<pl.y+pl.h;y+=22){ ctx.fillStyle="#c9a06a"; ctx.fillRect(pl.x+8,y,36,4); }
+      return;
+    }
+    ctx.fillStyle = pl.tag==="room"?"#3a261c":"#2a1b14";
+    ctx.fillRect(pl.x, pl.y, pl.w, pl.h);
+    ctx.fillStyle="#1a100c";
+    ctx.beginPath(); ctx.moveTo(pl.x,pl.y); ctx.lineTo(pl.x+18,pl.y-10); ctx.lineTo(pl.x+pl.w+18,pl.y-10); ctx.lineTo(pl.x+pl.w,pl.y); ctx.fill();
+    if(pl.tag==="room"){
+      const def=ROOM_DEFS[pl.meta.room.type];
+      ctx.fillStyle="#e8d7b0"; ctx.font="12px sans-serif";
+      ctx.fillText((def&&def.name)||"Hollow", pl.x+12, pl.y-16);
+      if(pl.meta.room.ready>=8){ ctx.fillStyle="#ffb347"; ctx.fillText("READY", pl.x+pl.w-60, pl.y-16); }
+    }
+    if(pl.tag==="gate"){ ctx.fillStyle="#ff8a3d"; ctx.fillRect(pl.x+20,pl.y-70,50,70); ctx.fillStyle="#2a0d04"; ctx.fillText("WILDS",pl.x+24,pl.y-80); }
+    if(pl.tag==="altar"){ ctx.fillStyle="#7dff9a"; ctx.fillRect(pl.x+20,pl.y-40,50,40); ctx.fillStyle="#e8d7b0"; ctx.fillText("BLOOM",pl.x+22,pl.y-48); }
+  });
+  if(G.goal){ ctx.fillStyle="#c9a6ff"; ctx.fillRect(G.goal.x, G.goal.y-70, 70,70); ctx.fillStyle="#fff"; ctx.fillText("SHRINE",G.goal.x, G.goal.y-78); }
+  const t=performance.now()/1000;
+  G.actors.forEach(a=>{
+    drawBillboard(ctx, unitImg(a.form), a.x+14, a.y, a.facing||1, a.form, a.kind==="foe", t);
+  });
+  const p=G.player;
+  drawBillboard(ctx, unitImg(p.form), p.x+14, p.y, p.facing, p.form, false, t);
+  ctx.restore();
+  // hp
+  ctx.fillStyle="#3a1210"; ctx.fillRect(12, vh-118, 120, 8);
+  ctx.fillStyle="#c44536"; ctx.fillRect(12, vh-118, 120*(p.hp/Math.max(1,(UNITS[p.form]||UNITS.sporeling).hp)), 8);
+}
+
+function loop(now){
+  if(!S) return;
+  const dt=Math.min(0.033,(loop._l?(now-loop._l):16)/1000); loop._l=now;
+  stepWorld(dt);
+  draw();
+  raf=requestAnimationFrame(loop);
 }
 
 function renderHud(){
-  const p = S.dwellers.length, cap = popCap();
-  const w = S.plague ? worldStats() : {inf:0,dead:0,pop:1};
-  const infPct = Math.floor(100 * w.inf / Math.max(1, w.pop - w.dead));
-  $("hud").innerHTML = `
-    <div class="res ember"><span class="dot" style="background:var(--ember)"></span>EM <div class="bar"><i style="width:${S.res.ember/S.cap.ember*100}%"></i></div>${Math.floor(S.res.ember)}</div>
-    <div class="res food"><span class="dot" style="background:var(--spore)"></span>FD <div class="bar"><i style="width:${S.res.food/S.cap.food*100}%"></i></div>${Math.floor(S.res.food)}</div>
-    <div class="res dew"><span class="dot" style="background:var(--dew)"></span>DW <div class="bar"><i style="width:${S.res.dew/S.cap.dew*100}%"></i></div>${Math.floor(S.res.dew)}</div>
-    <div class="res spirit"><span class="dot" style="background:var(--spirit)"></span>SP <div class="bar"><i style="width:${S.res.spirit/S.cap.spirit*100}%"></i></div>${Math.floor(S.res.spirit)}</div>
-    <div class="res pop">👥 ${p}/${cap} · 🧬 ${Math.floor(S.plague.dna)} · 🍄 ${infPct}%</div>
-    <div class="res bone">🦴 ${Math.floor(S.res.bone)} · 😊 ${Math.floor(S.happiness)} · Day ${S.day}</div>
-    <div class="news">${S.plague.cureOn ? "CLEANSE "+Math.floor(S.plague.cure)+"% · " : ""}${S.plague.news||""}</div>
-  `;
-}
-
-function renderHold(){
-  renderHud();
-  const v = $("vault");
-  v.innerHTML = "";
-  if (S.incident) {
-    const banner = document.createElement("div");
-    banner.style.cssText = "background:#3a1210;border:1px solid #c44536;border-radius:10px;padding:8px 10px;font-size:12px";
-    banner.textContent = "⚠ " + S.incident.title + " · " + Math.ceil(S.incident.t) + "s";
-    v.appendChild(banner);
-  }
-  S.floors.forEach(f => {
-    const row = document.createElement("div");
-    row.className = "floor" + (f.kind==="gate" ? " gate" : "");
-    const cells = [];
-    f.slots.forEach((room, i) => {
-      if (f.kind!=="gate" && i===1) {
-        const sh = document.createElement("div");
-        sh.className = "shaft"; sh.textContent = f.locked ? "LOCKED" : "SHAFT";
-        cells.push(sh);
-      }
-      const el = document.createElement("div");
-      const def = ROOM_DEFS[room.type] || ROOM_DEFS.empty;
-      el.className = "room " + room.type + (f.locked?" locked":"") + (S.incident && room.type==="watchgate" && S.incident.id==="raid" ? " incident":"");
-      if (room.type==="empty" && !f.locked) {
-        el.classList.add("empty");
-        el.textContent = "＋";
-        el.onclick = () => openBuild(room);
-      } else if (!f.locked) {
-        const wr = room.workers.map(id => S.dwellers.find(x=>x.id===id)).filter(Boolean);
-        el.innerHTML = `<h3>${def.icon} ${def.name}  <span class="pill">Lv${room.lv}</span></h3>
-          <div class="meta">${def.prod ? def.prod.toUpperCase()+" +"+(def.base*room.lv).toFixed(1) : (def.pop? ("+"+(def.pop*room.lv)+" beds") : (def.war?"Expeditions": def.defense?"Defense "+defense(): ""))}</div>
-          <div class="slots">${Array.from({length: (def.slots||0)+(room.lv-1)}).map((_,i)=> {
-            const w = wr[i];
-            return `<div class="slot ${w?"filled":""}" title="${w?w.name:""}">${faceHTML(w)}</div>`;
-          }).join("")}</div>
-          <div class="bubble ${room.ready>=8?"on":""}">${room.ready>=8?Math.floor(room.ready):""}</div>`;
-        el.onclick = (e) => {
-          if (room.ready>=8 && def.prod) { collectRoom(room); return; }
-          openRoom(room);
-        };
-      } else {
-        el.classList.add("empty"); el.textContent = "🔒";
-        el.onclick = () => {
-          if (S.res.bone >= 120 && S.dwellers.length >= 8) {
-            f.locked = false; S.res.bone -= 120; S.cap.ember += 30; S.cap.food += 30; S.cap.dew += 30;
-            pushLog("A new depth of the hold is carved.");
-            renderHold();
-          } else toast("Need 120 bone and 8 tribe to dig deeper.");
-        };
-      }
-      cells.push(el);
-    });
-    cells.forEach(c => row.appendChild(c));
-    v.appendChild(row);
-  });
-}
-
-function closeSheets(){
-  ["sheetPeople","sheetBuild","sheetWar","sheetStrain","sheetLog"].forEach(id => $(id).classList.remove("on"));
-}
-function openRoom(room){
-  closeSheets();
-  selectedRoom = room;
-  const def = ROOM_DEFS[room.type];
-  const el = $("sheetPeople");
-  const wr = room.workers.map(id => S.dwellers.find(x=>x.id===id)).filter(Boolean);
-  el.classList.add("on");
-  el.innerHTML = `<h2>${def.icon} ${def.name}</h2>
-    <div class="row"><div><b>Level ${room.lv}</b><small>Upgrade uses bone and idle hands.</small></div>
-      <button class="mini hot" id="upRoom">UPGRADE ${30*room.lv}🦴</button></div>
-    <div style="margin:8px 0;color:var(--muted);font-size:12px">Assigned</div>
-    ${wr.map(d=>personRow(d, true)).join("") || "<div class='row'><small>No one posted.</small></div>"}
-    <div style="margin:8px 0;color:var(--muted);font-size:12px">Idle tribe</div>
-    ${idleDwellers().map(d=>personRow(d,false)).join("") || "<div class='row'><small>Everyone is working.</small></div>"}
-    <button class="mini" style="width:100%;margin-top:8px" onclick="document.getElementById('sheetPeople').classList.remove('on')">CLOSE</button>`;
-  $("upRoom").onclick = () => {
-    const cost = 30*room.lv;
-    if (S.res.bone < cost) return toast("Not enough bone.");
-    if (room.lv>=3) return toast("Max level.");
-    S.res.bone -= cost; room.lv++; renderHold(); openRoom(room);
-  };
-  el.querySelectorAll("[data-assign]").forEach(btn => {
-    btn.onclick = () => {
-      const d = S.dwellers.find(x=>x.id===btn.dataset.assign);
-      assign(d, room); renderHold(); openRoom(room);
-    };
-  });
-  el.querySelectorAll("[data-free]").forEach(btn => {
-    btn.onclick = () => {
-      const d = S.dwellers.find(x=>x.id===btn.dataset.free);
-      unassign(d); renderHold(); openRoom(room);
-    };
-  });
-}
-function faceHTML(d){
-  if (d && d.portrait) return `<img src="${d.portrait}" alt="">`;
-  if (d && d.faceSeed) return `<img src="${paintPortrait(d.faceSeed)}" alt="">`;
-  return d ? (d.icon||"•") : "";
-}
-function personRow(d, assigned){
-  return `<div class="row">
-    <div class="face">${faceHTML(d)}</div>
-    <div style="flex:1"><b>${d.name}</b><small>B${d.brawn} S${d.sight} G${d.grit} V${d.voice} C${d.craft} · HP ${Math.floor(d.hp)}</small></div>
-    <button class="mini" data-${assigned?"free":"assign"}="${d.id}">${assigned?"PULL":"POST"}</button>
-  </div>`;
-}
-
-function openPeople(){
-  closeSheets();
-  const el = $("sheetPeople"); el.classList.add("on");
-  el.innerHTML = `<h2>TRIBE · ${S.dwellers.length}/${popCap()}</h2>
-    <div class="row" style="display:block">
-      <img src="art/chief.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;border-radius:10px;margin-bottom:8px" alt="Chief Ashborn">
-      <small>Chief Ashborn keeps the hearth. Thorn hunts the Nightwood. Moss gathers Dewfen light. Lumen speaks to the fire. The Ash-Raider and the Old One wait outside.</small>
-    </div>
-    ${S.dwellers.map(d=>`<div class="row">
-      <div class="face">${faceHTML(d)}</div>
-      <div style="flex:1"><b>${d.name}</b><small>${d.role} · ${d.room? (ROOM_DEFS[roomById(d.room).type].name) : "idle"} · B${d.brawn} S${d.sight} G${d.grit} V${d.voice} C${d.craft}</small></div>
-    </div>`).join("")}
-    <button class="mini" style="width:100%" onclick="document.getElementById('sheetPeople').classList.remove('on')">CLOSE</button>`;
-}
-
-function openBuild(targetRoom){
-  closeSheets();
-  const el = $("sheetBuild"); el.classList.add("on");
-  const types = Object.keys(ROOM_DEFS).filter(k => k!=="empty" && k!=="hearth");
-  el.innerHTML = `<h2>CARVE A ROOM</h2>
-    ${types.map(k=>{
-      const d = ROOM_DEFS[k];
-      const need = S.dwellers.length >= (d.unlock||0);
-      const cost = Object.entries(d.cost||{}).map(([a,b])=>b+a[0].toUpperCase()).join(" ");
-      return `<div class="row"><div><b>${d.icon} ${d.name}</b><small>${cost || "free"} ${need?"":"· locked"}</small></div>
-        <button class="mini hot" data-build="${k}" ${need?"":"disabled"}>RAISE</button></div>`;
-    }).join("")}
-    <button class="mini" style="width:100%" onclick="document.getElementById('sheetBuild').classList.remove('on')">CLOSE</button>`;
-  el.querySelectorAll("[data-build]").forEach(btn => {
-    btn.onclick = () => {
-      const k = btn.dataset.build;
-      const d = ROOM_DEFS[k];
-      for (const [res,amt] of Object.entries(d.cost||{})) {
-        if ((S.res[res]||0) < amt) return toast("Need more "+res+".");
-      }
-      if (!targetRoom || targetRoom.type!=="empty") {
-        const hollow = allRooms().find(x => !x.floor.locked && x.room.type==="empty");
-        if (!hollow) return toast("No hollow left. Dig deeper.");
-        targetRoom = hollow.room;
-      }
-      for (const [res,amt] of Object.entries(d.cost||{})) S.res[res]-=amt;
-      targetRoom.type = k; targetRoom.lv = 1; targetRoom.workers=[]; targetRoom.ready=0;
-      pushLog("Raised a "+d.name+".");
-      closeSheets(); renderHold();
-    };
-  });
-}
-
-const MAPS = [
-  { id:"glen", region:"glen", name:"Ashen Glen", threat:1, spirit:4, reward:{bone:25, food:12},
-    nodes:[
-      {id:0,x:.18,y:.55,type:"village",owner:"player",n:18,lv:1},
-      {id:1,x:.38,y:.32,type:"village",owner:"neutral",n:8,lv:1},
-      {id:2,x:.40,y:.72,type:"tower",owner:"neutral",n:10,lv:1},
-      {id:3,x:.62,y:.48,type:"village",owner:"neutral",n:12,lv:1},
-      {id:4,x:.82,y:.38,type:"village",owner:"enemy",n:16,lv:1},
-      {id:5,x:.78,y:.70,type:"forge",owner:"enemy",n:8,lv:1},
-    ],
-    edges:[[0,1],[0,2],[1,3],[2,3],[3,4],[3,5],[4,5]]
-  },
-  { id:"ribs", region:"ribs", name:"Rib-Cairn", threat:2, spirit:8, reward:{bone:40, spirit:6, food:10},
-    nodes:[
-      {id:0,x:.14,y:.50,type:"village",owner:"player",n:22,lv:2},
-      {id:1,x:.32,y:.28,type:"tower",owner:"neutral",n:12,lv:1},
-      {id:2,x:.34,y:.72,type:"village",owner:"neutral",n:10,lv:1},
-      {id:3,x:.52,y:.50,type:"forge",owner:"neutral",n:8,lv:1},
-      {id:4,x:.70,y:.28,type:"village",owner:"enemy",n:18,lv:1},
-      {id:5,x:.72,y:.72,type:"tower",owner:"enemy",n:14,lv:1},
-      {id:6,x:.88,y:.50,type:"village",owner:"enemy",n:20,lv:2},
-    ],
-    edges:[[0,1],[0,2],[1,3],[2,3],[3,4],[3,5],[4,6],[5,6],[1,4],[2,5]]
-  },
-  { id:"oldone", region:"mouth", name:"Mouth of the Old One", threat:3, spirit:14, reward:{bone:70, spirit:12},
-    nodes:[
-      {id:0,x:.12,y:.55,type:"village",owner:"player",n:26,lv:2},
-      {id:1,x:.30,y:.30,type:"village",owner:"neutral",n:14,lv:1},
-      {id:2,x:.30,y:.78,type:"tower",owner:"neutral",n:16,lv:1},
-      {id:3,x:.50,y:.50,type:"forge",owner:"neutral",n:10,lv:1},
-      {id:4,x:.50,y:.22,type:"tower",owner:"enemy",n:18,lv:2},
-      {id:5,x:.70,y:.38,type:"village",owner:"enemy",n:22,lv:2},
-      {id:6,x:.70,y:.70,type:"village",owner:"enemy",n:18,lv:1},
-      {id:7,x:.88,y:.52,type:"village",owner:"enemy",n:28,lv:2},
-    ],
-    edges:[[0,1],[0,2],[1,3],[2,3],[1,4],[3,5],[3,6],[4,5],[5,7],[6,7],[2,6]]
-  }
-];
-
-function openWar(){
-  closeSheets();
-  const el = $("sheetWar"); el.classList.add("on");
-  const hasBarracks = allRooms().some(({room,floor})=>room.type==="barracks" && !floor.locked);
-  el.innerHTML = `<h2>THE WILDS</h2>
-    <p style="color:#cbb89a;font-size:13px">Send spore-soldiers down the mycelium roads. Capture every node. Bring home bone, food, and lost kin.</p>
-    ${!hasBarracks ? "<div class='row'><small>Raise a Spore Barracks to march farther maps. Glen is open.</small></div>":""}
-    ${MAPS.map((m,i)=>{
-      const lock = i>0 && !hasBarracks && i>=S.unlockedMaps;
-      const pct = Math.floor(regionInfectPct(m.region)*100);
-      const cost = Math.max(1, m.spirit - Math.floor(pct/25));
-      return `<div class="row"><div><b>${m.name}</b><small>Threat ${m.threat} · ${cost} spirit · infected ${pct}%</small></div>
-        <button class="mini hot" data-map="${m.id}" ${lock?"disabled":""}>MARCH</button></div>`;
-    }).join("")}
-    <div class="row"><div><b>Living Vein</b><small>Procedural mycelium field · 7 spirit · new layout each march</small></div>
-      <button class="mini hot" data-map="vein">MARCH</button></div>
-    <button class="mini" style="width:100%" onclick="document.getElementById('sheetWar').classList.remove('on')">CLOSE</button>`;
-  el.querySelectorAll("[data-map]").forEach(btn => btn.onclick = () => startBattle(btn.dataset.map));
-}
-
-function openLog(){
-  closeSheets();
-  const el = $("sheetLog"); el.classList.add("on");
-  const riteCost = 10;
-  el.innerHTML = `<h2>RITES & MEMORY</h2>
-    <div class="row"><div><b>Rite of Warmth</b><small>Spend 10 spirit. +12 happiness, +8 ember.</small></div>
-      <button class="mini hot" id="rite">CHANT</button></div>
-    <div class="row"><div><b>Awaken a Savage</b><small>Spend 18 spirit + 20 bone. A lost soul joins the hold.</small></div>
-      <button class="mini hot" id="awaken">AWAKEN</button></div>
-    <div class="log">${S.log.map(x=>"<div>"+x+"</div>").join("")}</div>
-    <button class="mini" style="width:100%;margin-top:8px" onclick="document.getElementById('sheetLog').classList.remove('on')">CLOSE</button>`;
-  $("rite").onclick = () => {
-    if (S.res.spirit < riteCost) return toast("The altar is dry.");
-    S.res.spirit -= riteCost; S.happiness = Math.min(100, S.happiness+12);
-    S.res.ember = clamp(S.res.ember+8,0,S.cap.ember);
-    if (S.incident && S.incident.id==="whisper") S.incident.t = Math.min(S.incident.t, 4);
-    pushLog("The tribe chants the Rite of Warmth.");
-    renderHold(); openLog();
-  };
-  $("awaken").onclick = () => {
-    if (S.res.spirit < 18 || S.res.bone < 20) return toast("Need spirit and bone.");
-    if (S.dwellers.length >= popCap()) return toast("No beds. Build a Den.");
-    S.res.spirit -= 18; S.res.bone -= 20;
-    const d = newDweller("awakened");
-    S.dwellers.push(d);
-    pushLog("Awakened "+d.name+" from the wild dark.");
-    toast(d.name+" joins the hearth.");
-    renderHold(); openLog();
-  };
-}
-
-function openStrain(){
-  closeSheets();
-  const el = $("sheetStrain"); el.classList.add("on");
-  const P = S.plague;
-  const w = worldStats();
-  const infPct = Math.floor(100*w.inf/Math.max(1,w.pop-w.dead));
-  const deadPct = Math.floor(100*w.dead/w.pop);
-  el.innerHTML = `<h2>ASHSPORE STRAIN</h2>
-    <div class="statgrid">
-      <div class="statbox"><b>${Math.floor(P.dna)}</b><small>DNA</small></div>
-      <div class="statbox"><b>${infPct}%</b><small>infected</small></div>
-      <div class="statbox"><b>${P.cureOn?Math.floor(P.cure)+"%":"—"}</b><small>cleanse</small></div>
-    </div>
-    <div class="statgrid">
-      <div class="statbox"><b>${P.inf}</b><small>infect</small></div>
-      <div class="statbox"><b>${P.sev}</b><small>severity</small></div>
-      <div class="statbox"><b>${P.let}</b><small>lethal</small></div>
-    </div>
-    <div id="worldwrap">
-      <div id="atlas">
-      ${REGIONS.map(r => {
-        const L = P.lands[r.id];
-        const pct = regionInfectPct(r.id);
-        const dead = L.dead / r.pop;
-        const bg = dead>0.6 ? "#2a0810" : `rgba(${Math.floor(40+pct*80)},${Math.floor(80+pct*120)},${Math.floor(30+pct*20)},.95)`;
-        const border = L.closed ? "#c44536" : (pct>0.05 ? "#7dff9a" : "#4a5a38");
-        return `<button class="region ${pct>0.2?"hot":""}" data-reg="${r.id}" style="left:${r.x}%;top:${r.y}%;background:${bg};border-color:${border}">
-          ${r.name.split(" ")[0]}<br>${Math.floor(pct*100)}%
-        </button>`;
-      }).join("")}
-      </div>
-      <canvas id="fog"></canvas>
-    </div>
-    <p style="color:#cbb89a;font-size:12px;margin:0 0 8px">${P.news} · dead ${deadPct}% · tap a land to zoom · tap two bloomed lands to grow a vein (6 DNA)</p>
-    ${["transmit","symptom","ability"].map(br => `
-      <div style="margin:8px 0 4px;color:var(--muted);font-size:11px;letter-spacing:.12em">${br.toUpperCase()}</div>
-      ${EVOLUTIONS.filter(e=>e.branch===br).map(e => {
-        const owned = P.evolved.includes(e.id);
-        return `<div class="row"><div><b>${owned?"✓ ":""}${e.name}</b><small>${e.desc} · ${e.cost} DNA</small></div>
-          <button class="mini ${owned?"":"hot"}" data-ev="${e.id}" ${owned?"disabled":""}>${owned?"IN":"EVOLVE"}</button></div>`;
-      }).join("")}
-    `).join("")}
-    <button class="mini" style="width:100%;margin-top:8px" onclick="document.getElementById('sheetStrain').classList.remove('on')">CLOSE</button>`;
-  el.querySelectorAll("[data-ev]").forEach(b => b.onclick = () => evolveStrain(b.dataset.ev));
-  let veinPick = null;
-  el.querySelectorAll("[data-reg]").forEach(b => b.onclick = (ev) => {
-    ev.stopPropagation();
-    const id = b.dataset.reg;
-    const r = REGIONS.find(x=>x.id===id);
-    const L = P.lands[r.id];
-    zoomAtlas(r.x, r.y);
-    if (veinPick && veinPick!==id) { growVein(veinPick, id); veinPick=null; return; }
-    veinPick = id;
-    toast(r.name+" · "+r.climate+" · inf "+Math.floor(L.inf)+" / dead "+Math.floor(L.dead)+(L.closed?" · SEALED":"")+" · tap another bloomed land to grow a vein");
-  });
-  $("worldwrap").onclick = (e) => { if (e.target.id==="worldwrap" || e.target.id==="fog" || e.target.id==="atlas") resetAtlas(); };
-  startFog();
-}
-
-function startBattle(mapId){
-  let map, pct, cost, region;
-  if (mapId==="vein"){
-    region = pick(REGIONS).id;
-    pct = regionInfectPct(region);
-    cost = 7;
-    const gen = genBattleMap(region, 2);
-    map = { id:"vein", region, name:"Living Vein", threat:2, spirit:7, reward:{bone:32, food:10, spirit:4}, nodes:gen.nodes, edges:gen.edges };
-  } else {
-    map = MAPS.find(m=>m.id===mapId);
-    region = map.region;
-    pct = regionInfectPct(region);
-    cost = Math.max(1, map.spirit - Math.floor(pct*100/25));
-  }
-  if (S.res.spirit < cost) return toast("Not enough spirit to march.");
-  S.res.spirit -= cost;
-  closeSheets();
-  $("hold").classList.remove("on");
-  $("battle").classList.add("on");
-  const nodes = map.nodes.map(n => ({...n, n:n.n, cooldown:0}));
-  const gritBoost = S.dwellers.reduce((a,d)=>a+d.grit,0);
-  nodes.filter(n=>n.owner==="player").forEach(n => n.n = Math.floor(n.n + gritBoost*0.35 + pct*10));
-  nodes.filter(n=>n.owner==="enemy").forEach(n => n.n = Math.max(4, Math.floor(n.n * (1 - pct*0.35))));
-  battle = {
-    map, nodes, edges: map.edges,
-    waves: [], selected: null, t: 0, over: false,
-    atkMul: 1 + Math.min(0.4, gritBoost/80) + pct*0.25,
-    region, infPct: pct
-  };
-  bindCanvas();
-  loopBattle();
-}
-
-function bindCanvas(){
-  const c = $("bcanvas");
-  const resize = () => {
-    const r = c.getBoundingClientRect();
-    c.width = r.width * devicePixelRatio;
-    c.height = (window.innerHeight - 64) * devicePixelRatio;
-    c.style.height = (window.innerHeight - 64) + "px";
-  };
-  resize();
-  c.onclick = ev => {
-    if (!battle || battle.over) return;
-    const rect = c.getBoundingClientRect();
-    const px = (ev.clientX-rect.left) * devicePixelRatio;
-    const py = (ev.clientY-rect.top) * devicePixelRatio;
-    let hit = null, best=9999;
-    battle.nodes.forEach(n => {
-      const P = project(n.x, n.y, c.width, c.height);
-      const d = Math.hypot(P.x-px, P.y-py);
-      if (d < 46*devicePixelRatio*P.s && d<best){ best=d; hit=n; }
-    });
-    if (!hit) { battle.selected=null; return; }
-    if (!battle.selected) {
-      if (hit.owner!=="player") { toast("That node is not yours."); return; }
-      battle.selected = hit.id;
-    } else if (battle.selected===hit.id) {
-      if (hit.owner==="player" && hit.type==="village" && hit.n>=12 && hit.lv<3) {
-        hit.n -= 10; hit.lv++; toast("Village raised to lv"+hit.lv);
-      } else battle.selected = null;
-    } else {
-      const linked = battle.edges.some(([a,b]) =>
-        (a===battle.selected && b===hit.id) || (b===battle.selected && a===hit.id));
-      if (!linked) { toast("No mycelium road."); return; }
-      sendWave(battle.selected, hit.id);
-      battle.selected = null;
-    }
-  };
-}
-
-function sendWave(fromId, toId){
-  const from = battle.nodes[fromId];
-  const kind = sendUnit;
-  const U = UNITS[kind];
-  const amt = Math.max(1, Math.floor(from.n * sendPct/100));
-  if (from.n-amt < 0) return;
-  from.n -= amt;
-  battle.waves.push({
-    from: fromId, to: toId, owner: from.owner, n: amt, p: 0,
-    speed: U.speed, kind, hp: U.hp
-  });
-}
-
-function enemyAI(dt){
-  battle._ai = (battle._ai||0) + dt;
-  if (battle._ai < 1.3) return;
-  battle._ai = 0;
-  const mine = battle.nodes.filter(n=>n.owner==="enemy" && n.n>8);
-  if (!mine.length) return;
-  const src = pick(mine);
-  const links = battle.edges.filter(([a,b])=>a===src.id||b===src.id)
-    .map(([a,b])=> battle.nodes[a===src.id?b:a]);
-  const target = links.sort((a,b)=>{
-    const score = n => (n.owner==="player"?3:n.owner==="neutral"?2:0) + (n.type==="village"?1:0) - n.n/40;
-    return score(b)-score(a);
-  })[0];
-  if (!target) return;
-  const pct = target.owner==="enemy" ? 0.3 : 0.55;
-  const amt = Math.max(1, Math.floor(src.n*pct));
-  src.n -= amt;
-  const kinds = ["sporeling","boneguard","capthrow","veinwalker"];
-  const kind = pick(kinds);
-  battle.waves.push({ from:src.id, to:target.id, owner:"enemy", n:amt, p:0, speed: UNITS[kind].speed, kind, hp: UNITS[kind].hp });
-}
-
-function stepBattle(dt){
-  if (!battle || battle.over) return;
-  battle.t += dt;
-  battle.nodes.forEach(n => {
-    if (n.type==="village") {
-      const cap = 15 + n.lv*12;
-      const rate = (n.owner==="neutral"?0.6 : 1.1 + n.lv*0.35);
-      if (n.n < cap) n.n = Math.min(cap, n.n + rate*dt);
-    }
-    if (n.type==="tower" && n.owner!=="neutral") {
-      battle.waves.forEach(w => {
-        if (w.owner===n.owner) return;
-        const midOk = w.p>0.15 && w.p<0.85;
-        const near = battle.edges.some(([a,b])=> (a===n.id||b===n.id) && (a===w.from||b===w.from||a===w.to||b===w.to));
-        if (midOk && near && Math.random()<0.5*dt) {
-          const resist = UNITS[w.kind] ? UNITS[w.kind].tower : 1;
-          w.n = Math.max(0, w.n - (1.2+n.lv)*resist);
-        }
-      });
-    }
-  });
-  const forgeBonus = {};
-  battle.nodes.forEach(n => { if (n.type==="forge" && n.owner!=="neutral") forgeBonus[n.owner]=(forgeBonus[n.owner]||1)+0.18; });
-
-  battle.waves.forEach(w => { w.p += w.speed * dt; });
-  const left = [];
-  battle.waves.forEach(w => {
-    if (w.n<=0) return;
-    if (w.p < 1) { left.push(w); return; }
-    const dest = battle.nodes[w.to];
-    const U = UNITS[w.kind] || UNITS.sporeling;
-    let mul = (forgeBonus[w.owner]||1) * (w.owner==="player"? battle.atkMul : 1) * U.atk * U.hp;
-    if (w.kind==="convert" && battle.infPct>0.25) mul *= 1.2;
-    const force = w.n * mul;
-    if (dest.owner === w.owner) dest.n += w.n;
-    else {
-      dest.n -= force;
-      if (dest.n <= 0) {
-        dest.owner = w.owner;
-        dest.n = Math.max(1, Math.floor(-dest.n));
-      }
-    }
-  });
-  battle.waves = left.filter(w=>w.n>0);
-  enemyAI(dt);
-
-  const owners = new Set(battle.nodes.map(n=>n.owner));
-  if (!owners.has("enemy") && !battle.waves.some(w=>w.owner==="enemy")) endBattle(true);
-  if (!owners.has("player") && !battle.waves.some(w=>w.owner==="player")) endBattle(false);
-}
-
-function endBattle(win){
-  if (!battle || battle.over) return;
-  battle.over = true;
-  cancelAnimationFrame(raf);
-  const map = battle.map;
-  $("modal").className = "on";
-  if (win) {
-    S.warsWon++;
-    S.unlockedMaps = Math.max(S.unlockedMaps, MAPS.findIndex(m=>m.id===map.id)+2);
-    for (const [k,v] of Object.entries(map.reward)) S.res[k] = clamp((S.res[k]||0)+v, 0, S.cap[k]||999);
-    S.plague.dna += 5 + map.threat*2;
-    const L = S.plague.lands[map.region];
-    const R = REGIONS.find(r=>r.id===map.region);
-    if (L && R) {
-      const seed = 80 + S.plague.inf*12 + (S.plague.war?160:40);
-      if (L.inf <= 0) { S.plague.dna += 3; S.plague.news = "First cough in "+R.name+"."; }
-      L.inf = Math.min(R.pop-L.dead, L.inf + seed);
-    }
-    let extra = "";
-    if (S.dwellers.length < popCap() && Math.random()<0.65) {
-      const d = newDweller("awakened");
-      S.dwellers.push(d);
-      extra = `<p>${d.icon} ${d.name} crawled from a captured village to your hearth.</p>`;
-    }
-    pushLog("Victory in "+map.name+".");
-    $("modal").innerHTML = `<div class="card"><h2>THE NODE FALLS</h2>
-      <p>${map.name} is yours. Bone and forage come home.</p>${extra}
-      <button class="bigbtn" id="leaveWar">RETURN TO HOLD</button></div>`;
-  } else {
-    S.happiness = Math.max(15, S.happiness-8);
-    pushLog("Routed in "+map.name+".");
-    $("modal").innerHTML = `<div class="card"><h2>THE DARK TAKES THEM</h2>
-      <p>Your warband breaks. The hearth still burns. Train grit. March again.</p>
-      <button class="bigbtn" id="leaveWar">RETURN TO HOLD</button></div>`;
-  }
-  $("leaveWar").onclick = leaveBattle;
-}
-
-function leaveBattle(){
-  $("modal").className = "";
-  $("battle").classList.remove("on");
-  $("hold").classList.add("on");
-  battle = null;
-  renderHold();
-}
-
-function loopBattle(){
-  const c = $("bcanvas");
-  const ctx = c.getContext("2d");
-  let last = performance.now();
-  const step = now => {
-    if (!battle) return;
-    const dt = Math.min(0.05, (now-last)/1000); last = now;
-    stepBattle(dt);
-    drawBattle(ctx, c);
-    if (!battle.over) raf = requestAnimationFrame(step);
-  };
-  raf = requestAnimationFrame(step);
-}
-
-function drawBattle(ctx, c){
-  const w=c.width, h=c.height;
-  ctx.clearRect(0,0,w,h);
-  if (drawBattle.bg && drawBattle.bg.complete) {
-    ctx.globalAlpha = 0.42;
-    ctx.drawImage(drawBattle.bg, 0, 0, w, h);
-    ctx.globalAlpha = 1;
-  } else {
-    ctx.fillStyle = "#0e0b08"; ctx.fillRect(0,0,w,h);
-  }
-  ctx.fillStyle = "#0b0706aa"; ctx.fillRect(0,0,w,h);
-
-  // ground grid in 2.5D
-  ctx.strokeStyle = "rgba(80,50,30,0.28)";
-  ctx.lineWidth = 1;
-  for (let i=0;i<=8;i++){
-    const a = project(0, i/8, w, h), b = project(1, i/8, w, h);
-    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
-    const c1 = project(i/8, 0, w, h), c2 = project(i/8, 1, w, h);
-    ctx.beginPath(); ctx.moveTo(c1.x,c1.y); ctx.lineTo(c2.x,c2.y); ctx.stroke();
-  }
-
-  battle.edges.forEach(([a,b])=>{
-    const A=project(battle.nodes[a].x, battle.nodes[a].y, w, h);
-    const B=project(battle.nodes[b].x, battle.nodes[b].y, w, h);
-    ctx.strokeStyle = "rgba(125,200,120,0.45)";
-    ctx.lineWidth = 5*devicePixelRatio;
-    ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke();
-    ctx.strokeStyle = "rgba(255,160,60,0.25)";
-    ctx.lineWidth = 2*devicePixelRatio;
-    ctx.stroke();
-  });
-
-  const sprites = [];
-  battle.nodes.forEach(n => sprites.push({ y:n.y, kind:"bldg", n }));
-  battle.waves.forEach(wave => {
-    const A=battle.nodes[wave.from], B=battle.nodes[wave.to];
-    const x = A.x + (B.x-A.x)*wave.p;
-    const y = A.y + (B.y-A.y)*wave.p;
-    sprites.push({ y, kind:"wave", wave, x, facing: B.x>=A.x ? 1 : -1 });
-  });
-  sprites.sort((a,b)=>a.y-b.y);
-  sprites.forEach(s => {
-    if (s.kind==="bldg") drawBuilding25(ctx, s.n, w, h);
-    else drawSquad25(ctx, s.wave, s.x, s.y, s.facing, w, h);
-  });
-}
-
-function project(nx, ny, w, h){
-  return {
-    x: (nx-0.5)*w*0.94 + w*0.5,
-    y: ny*h*0.58 + h*0.20,
-    s: 0.68 + ny*0.50
-  };
-}
-
-const UNIT_IMG = {};
-["sporeling","boneguard","capthrow","veinwalker","convert","seerspark"].forEach(k => {
-  const im = new Image();
-  im.src = "art/units/"+k+".png";
-  UNIT_IMG[k] = im;
-});
-
-function drawBuilding25(ctx, n, w, h){
-  const P = project(n.x, n.y, w, h);
-  const dpr = devicePixelRatio;
-  const s = P.s * dpr;
-  const col = n.owner==="player"?"#ff8a3d": n.owner==="enemy"?"#8b4dff":"#8a7a68";
-  ctx.save();
-  ctx.translate(P.x, P.y);
-  // shadow
-  ctx.fillStyle = "rgba(0,0,0,0.45)";
-  ctx.beginPath(); ctx.ellipse(0, 8*s, 28*s, 10*s, 0, 0, 6.28); ctx.fill();
-  if (n.type==="tower"){
-    isoBox(ctx, -10*s, -8*s, 20*s, 14*s, 46*s, col, "#2a1a12");
-    ctx.fillStyle = col;
-    ctx.beginPath(); ctx.moveTo(-12*s, -54*s); ctx.lineTo(0, -78*s); ctx.lineTo(12*s, -54*s); ctx.closePath(); ctx.fill();
-  } else if (n.type==="forge"){
-    isoBox(ctx, -16*s, -10*s, 32*s, 18*s, 18*s, "#5a3a22", "#2a1a12");
-    ctx.fillStyle = "#ff6a2a";
-    ctx.beginPath(); ctx.arc(0, -22*s, 8*s, 0, 6.28); ctx.fill();
-  } else {
-    isoBox(ctx, -18*s, -12*s, 36*s, 20*s, 16*s, "#3a2418", "#1a100c");
-    ctx.fillStyle = col;
-    ctx.beginPath(); ctx.ellipse(0, -28*s, 26*s, 12*s, 0, 0, 6.28); ctx.fill();
-    ctx.fillStyle = "#1a100c";
-    ctx.beginPath(); ctx.ellipse(0, -24*s, 12*s, 6*s, 0, 0, 6.28); ctx.fill();
-  }
-  if (battle.selected===n.id){
-    ctx.strokeStyle = "#ffe08a"; ctx.lineWidth = 2*dpr;
-    ctx.beginPath(); ctx.ellipse(0, 8*s, 32*s, 12*s, 0, 0, 6.28); ctx.stroke();
-  }
-  ctx.fillStyle = "#f4e8d4";
-  ctx.font = `bold ${11*s}px sans-serif`;
-  ctx.textAlign = "center";
-  ctx.fillText(Math.floor(n.n), 0, 22*s);
-  ctx.restore();
-
-  // idle garrison billboards
-  const idle = Math.min(4, Math.max(1, Math.floor(n.n/8)));
-  const kind = n.owner==="enemy" ? "boneguard" : "sporeling";
-  if (n.owner!=="neutral") {
-    for (let i=0;i<idle;i++){
-      const ox = (i-(idle-1)/2)*14;
-      drawUnitBillboard(ctx, P.x+ox*s, P.y-6*s, kind, n.owner, P.s*0.72, 1, battle.t*3+i);
-    }
-  }
-}
-
-function isoBox(ctx, x, y, w, d, hgt, top, side){
-  // simple 2.5d block: front + top + right
-  ctx.fillStyle = side;
-  ctx.beginPath();
-  ctx.moveTo(x, y); ctx.lineTo(x+w, y); ctx.lineTo(x+w, y-hgt); ctx.lineTo(x, y-hgt); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = top;
-  ctx.beginPath();
-  ctx.moveTo(x, y-hgt); ctx.lineTo(x+w*0.35, y-hgt-d*0.45); ctx.lineTo(x+w+w*0.35, y-hgt-d*0.45); ctx.lineTo(x+w, y-hgt); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = "#0006";
-  ctx.beginPath();
-  ctx.moveTo(x+w, y); ctx.lineTo(x+w+w*0.35, y-d*0.45); ctx.lineTo(x+w+w*0.35, y-hgt-d*0.45); ctx.lineTo(x+w, y-hgt); ctx.closePath(); ctx.fill();
-}
-
-function drawSquad25(ctx, wave, nx, ny, facing, w, h){
-  const P = project(nx, ny, w, h);
-  const count = Math.min(6, Math.max(1, Math.ceil(wave.n/8)));
-  for (let i=0;i<count;i++){
-    const col = i % 3, row = Math.floor(i/3);
-    const ox = (col-1)*16*P.s*devicePixelRatio;
-    const oy = row*10*P.s*devicePixelRatio;
-    drawUnitBillboard(ctx, P.x+ox, P.y+oy, wave.kind||"sporeling", wave.owner, P.s, facing, battle.t*8 + i);
-  }
-  ctx.fillStyle = "#fff";
-  ctx.font = `bold ${10*devicePixelRatio}px sans-serif`;
-  ctx.textAlign = "center";
-  ctx.fillText(Math.floor(wave.n), P.x, P.y + 28*P.s*devicePixelRatio);
-}
-
-function drawUnitBillboard(ctx, x, y, kind, owner, scale, facing, t){
-  const img = UNIT_IMG[kind] || UNIT_IMG.sporeling;
-  const dpr = devicePixelRatio;
-  const bob = Math.sin(t)*3*dpr*scale;
-  const hover = kind==="seerspark" ? Math.sin(t*0.6)*6*dpr : 0;
-  const hgt = 52 * dpr * scale;
-  const wid = 36 * dpr * scale;
-  ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.4)";
-  ctx.beginPath(); ctx.ellipse(x, y+8*dpr, wid*0.42, 5*dpr*scale, 0, 0, 6.28); ctx.fill();
-  ctx.translate(x, y - hgt*0.55 + bob - hover);
-  ctx.scale(facing<0 ? -1 : 1, 1);
-  if (img && img.complete && img.naturalWidth){
-    if (owner==="enemy"){
-      ctx.filter = "hue-rotate(210deg) saturate(1.15)";
-    }
-    ctx.drawImage(img, -wid/2, -hgt/2, wid, hgt);
-    ctx.filter = "none";
-  } else {
-    ctx.fillStyle = owner==="enemy" ? "#8b4dff" : (UNITS[kind]||UNITS.sporeling).color;
-    ctx.fillRect(-wid*0.2, 0, wid*0.4, hgt*0.5);
-    ctx.beginPath(); ctx.arc(0, -hgt*0.15, wid*0.28, 0, 6.28); ctx.fill();
-  }
-  ctx.restore();
+  const w=worldStats(); const inf=Math.floor(100*w.inf/Math.max(1,w.pop-w.dead));
+  $("hud").innerHTML=`
+    <div class="res">EM <div class="bar"><i style="width:${S.res.ember/S.cap.ember*100}%;background:var(--ember)"></i></div>${Math.floor(S.res.ember)}</div>
+    <div class="res">FD <div class="bar"><i style="width:${S.res.food/S.cap.food*100}%;background:var(--spore)"></i></div>${Math.floor(S.res.food)}</div>
+    <div class="res">DW <div class="bar"><i style="width:${S.res.dew/S.cap.dew*100}%;background:var(--dew)"></i></div>${Math.floor(S.res.dew)}</div>
+    <div class="res">SP <div class="bar"><i style="width:${S.res.spirit/S.cap.spirit*100}%;background:var(--spirit)"></i></div>${Math.floor(S.res.spirit)}</div>
+    <div class="res">🦴 ${Math.floor(S.res.bone)} · 😊 ${Math.floor(S.happiness)}</div>
+    <div class="res">🧬 ${Math.floor(S.bloom.dna)} · bloom ${inf}% · D${S.day}</div>`;
 }
 
 function tick(){
-  if (!S) return;
-  const dt = 1;
-  S.t += dt;
-  if (S.t % 60 === 0) S.day++;
-  consumeAndProduce(dt);
-  resolveIncident(dt);
-  S.dwellers.forEach(d => { if (d.hp<100) d.hp = Math.min(100, d.hp+0.15*dt); });
-  if (S.t % 8 === 0) save();
-  if ($("hold").classList.contains("on")) renderHold();
+  if(!S) return;
+  S.t++; if(S.t%60===0) S.day++;
+  consumeAndProduce(1); tickBloom(1);
+  if(S.t%8===0) save();
+  renderHud();
 }
 
+function closeSheet(){ $("sheet").classList.remove("on"); }
+function openRoom(room){
+  const def=ROOM_DEFS[room.type]||ROOM_DEFS.empty;
+  const wr=room.workers.map(id=>S.dwellers.find(d=>d.id===id)).filter(Boolean);
+  const el=$("sheet"); el.classList.add("on");
+  if(room.type==="empty"){
+    el.innerHTML=`<h2>HOLLOW</h2>${Object.keys(ROOM_DEFS).filter(k=>k!=="empty"&&k!=="hearth").map(k=>{
+      const d=ROOM_DEFS[k]; const cost=Object.entries(d.cost||{}).map(([a,b])=>b+" "+a).join(" · ");
+      return `<div class="row"><div><b>${d.name}</b><small> ${cost}</small></div><button class="mini hot" data-b="${k}">RAISE</button></div>`;
+    }).join("")}<button class="mini" style="width:100%" id="x">CLOSE</button>`;
+    el.querySelectorAll("[data-b]").forEach(b=>b.onclick=()=>{
+      const d=ROOM_DEFS[b.dataset.b];
+      for(const [k,v] of Object.entries(d.cost||{})){ if((S.res[k]||0)<v) return toast("Need more "+k); }
+      for(const [k,v] of Object.entries(d.cost||{})) S.res[k]-=v;
+      room.type=b.dataset.b; toast(d.name+" raised."); closeSheet(); buildHoldLevel();
+    });
+  } else {
+    el.innerHTML=`<h2>${def.name} Lv${room.lv}</h2>
+      ${room.ready>=8&&def.prod?`<button class="mini hot" style="width:100%" id="take">TAKE ${def.prod.toUpperCase()}</button>`:""}
+      <div class="row"><div><b>Upgrade</b></div><button class="mini hot" id="up">UP ${30*room.lv} bone</button></div>
+      ${wr.map(d=>`<div class="row person"><div class="face">${faceHTML(d)}</div><div><b>${d.name}</b></div><button class="mini" data-un="${d.id}">PULL</button></div>`).join("")}
+      ${idleDwellers().map(d=>`<div class="row person"><div class="face">${faceHTML(d)}</div><div><b>${d.name}</b></div><button class="mini hot" data-as="${d.id}">POST</button></div>`).join("")}
+      <button class="mini" style="width:100%" id="x">CLOSE</button>`;
+    const take=$("take"); if(take) take.onclick=()=>{
+      const n=room.ready; S.res[def.prod]=clamp((S.res[def.prod]||0)+n,0,S.cap[def.prod]||999); room.ready=0; toast("Took "+def.prod); closeSheet();
+    };
+    $("up").onclick=()=>{ const c=30*room.lv; if(S.res.bone<c) return toast("Need bone."); S.res.bone-=c; room.lv++; toast("Raised."); closeSheet(); buildHoldLevel(); };
+    el.querySelectorAll("[data-un]").forEach(b=>b.onclick=()=>{ const d=S.dwellers.find(x=>x.id===b.dataset.un); d.room=null; room.workers=room.workers.filter(id=>id!==d.id); closeSheet(); openRoom(room); buildHoldLevel(); });
+    el.querySelectorAll("[data-as]").forEach(b=>b.onclick=()=>{
+      if(room.workers.length>= (def.slots||0)+room.lv-1) return toast("Full.");
+      const d=S.dwellers.find(x=>x.id===b.dataset.as); d.room=room.id; room.workers.push(d.id); closeSheet(); openRoom(room); buildHoldLevel();
+    });
+  }
+  $("x").onclick=closeSheet;
+}
+
+function openWildsPick(){
+  const el=$("sheet"); el.classList.add("on");
+  el.innerHTML=`<h2>WEAR A BODY · WALK THE WILDS</h2>
+    ${Object.keys(UNITS).map(k=>`<div class="row"><div><b>${UNITS[k].name}</b><small>spd ${UNITS[k].speed} · atk ${UNITS[k].atk}</small></div>
+      <button class="mini hot" data-f="${k}">WEAR</button></div>`).join("")}
+    ${REGIONS.map(r=>`<div class="row"><div><b>${r.name}</b><small>bloom ${Math.floor(regionPct(r.id)*100)}%</small></div>
+      <button class="mini hot" data-r="${r.id}">RUN</button></div>`).join("")}
+    <button class="mini" style="width:100%" id="x">CLOSE</button>`;
+  el.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{ S.form=b.dataset.f; toast("Wearing "+UNITS[S.form].name); G.player.form=S.form; });
+  el.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{
+    if(S.res.spirit<4) return toast("Need spirit to leave the hold.");
+    S.res.spirit-=4; closeSheet(); mode="wilds"; buildWilds(b.dataset.r);
+  });
+  $("x").onclick=closeSheet;
+}
+
+function winWilds(){
+  const r=REGIONS.find(x=>x.id===G.region);
+  S.warsWon++; S.res.bone+=24; S.res.food=clamp(S.res.food+10,0,S.cap.food); S.bloom.dna+=6;
+  const L=S.bloom.lands[G.region];
+  L.inf=Math.min(r.pop-L.dead, L.inf+80+S.bloom.inf*10+(S.bloom.war?120:20));
+  if(S.dwellers.length<popCap() && Math.random()<0.5){ const d=newDweller("awakened"); S.dwellers.push(d); toast(d.name+" followed you home."); }
+  toast(r.name+" shrine claimed. The bloom thickens.");
+  mode="hold"; buildHoldLevel();
+}
+
+function openBloom(){
+  const P=S.bloom, w=worldStats(), infPct=Math.floor(100*w.inf/Math.max(1,w.pop-w.dead));
+  const el=$("sheet"); el.classList.add("on");
+  el.innerHTML=`<h2>ASHSPORE BLOOM</h2>
+    <div class="row"><div><b>${Math.floor(P.dna)} DNA</b></div><div>bloom ${infPct}% · rival rite ${P.cureOn?Math.floor(P.cure)+"%":"—"}</div></div>
+    <div id="worldwrap"><div id="atlas">${REGIONS.map(r=>{
+      const pct=regionPct(r.id); const L=P.lands[r.id];
+      return `<button class="region" data-reg="${r.id}" style="left:${r.x}%;top:${r.y}%;border-color:${L.closed?"#c44536":pct>0.05?"#7dff9a":"#4a5a38"}">${r.name.split(" ")[0]}<br>${Math.floor(pct*100)}%</button>`;
+    }).join("")}</div><canvas id="fog"></canvas></div>
+    <p style="font-size:12px;color:#cbb89a">${P.news} · tap two blooming lands to grow a vein (6 DNA)</p>
+    ${["carry","mark","craft"].map(br=>`
+      <div style="color:#9a846c;font-size:11px;letter-spacing:.12em;margin:8px 0 4px">${br.toUpperCase()}</div>
+      ${EVOLUTIONS.filter(e=>e.branch===br).map(e=>{
+        const on=P.evolved.includes(e.id);
+        return `<div class="row"><div><b>${on?"✓ ":""}${e.name}</b><small>${e.desc} · ${e.cost}</small></div>
+          <button class="mini ${on?"":"hot"}" data-ev="${e.id}" ${on?"disabled":""}>${on?"IN":"GROW"}</button></div>`;
+      }).join("")}
+    `).join("")}
+    <button class="mini" style="width:100%" id="x">CLOSE</button>`;
+  let pickA=null;
+  el.querySelectorAll("[data-reg]").forEach(b=>b.onclick=()=>{
+    const id=b.dataset.reg; const r=REGIONS.find(x=>x.id===id);
+    $("atlas").style.transform=`translate(${(50-r.x)*1.1}%,${(50-r.y)*1.1}%) scale(2.1)`;
+    if(pickA && pickA!==id){ growVein(pickA,id); pickA=null; openBloom(); return; }
+    pickA=id; toast(r.name+" · tap another blooming land to grow a vein");
+  });
+  el.querySelectorAll("[data-ev]").forEach(b=>b.onclick=()=>evolve(b.dataset.ev));
+  $("x").onclick=closeSheet;
+  startFog();
+}
+function growVein(a,b){
+  const P=S.bloom;
+  if(regionPct(a)<0.05||regionPct(b)<0.05) return toast("Both lands must bloom.");
+  if(P.dna<6) return toast("Need 6 DNA.");
+  P.dna-=6;
+  const ex=P.veins.find(v=>(v.a===a&&v.b===b)||(v.a===b&&v.b===a));
+  if(ex) ex.grown=true; else P.veins.push({a,b,w:0.6,flow:1,grown:true});
+  toast("A living vein thickens.");
+}
+function evolve(id){
+  const P=S.bloom, ev=EVOLUTIONS.find(e=>e.id===id);
+  if(!ev||P.evolved.includes(id)) return;
+  if(P.dna<ev.cost) return toast("Need more DNA.");
+  P.dna-=ev.cost; P.evolved.push(id);
+  Object.entries(ev.fx).forEach(([k,v])=>{ if(k==="burst"){ REGIONS.forEach(r=>{ const L=P.lands[r.id]; if(L.inf>0) L.inf+=220; }); } else P[k]=(P[k]||0)+v; });
+  toast("Grew "+ev.name); openBloom();
+}
+function startFog(){
+  const c=$("fog"), wrap=$("worldwrap"); if(!c||!wrap) return;
+  c.width=wrap.clientWidth; c.height=wrap.clientHeight;
+  const ctx=c.getContext("2d");
+  const parts=Array.from({length:24},()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:8+Math.random()*16,v:8+Math.random()*10,a:0.1}));
+  const step=()=>{
+    if(!$("fog")) return;
+    ctx.clearRect(0,0,c.width,c.height);
+    parts.forEach(p=>{ p.y-=p.v*0.016; if(p.y<0) p.y=c.height; ctx.fillStyle=`rgba(125,255,154,${p.a})`; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,6.28); ctx.fill(); });
+    (S.bloom.veins||[]).forEach(v=>{
+      const A=REGIONS.find(r=>r.id===v.a), B=REGIONS.find(r=>r.id===v.b);
+      ctx.strokeStyle=v.grown?"rgba(255,180,70,.7)":"rgba(125,255,154,.35)";
+      ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(A.x/100*c.width,A.y/100*c.height); ctx.lineTo(B.x/100*c.width,B.y/100*c.height); ctx.stroke();
+    });
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+function bindPads(){
+  const hold=(id,k,on)=>{ const el=$(id); const go=e=>{ e.preventDefault(); keys[k]=on; }; el.addEventListener("pointerdown",e=>go(e)||(keys[k]=true)); el.addEventListener("pointerup",()=>keys[k]=false); el.addEventListener("pointerleave",()=>keys[k]=false); };
+  hold("btnL","l",true); hold("btnR","r",true);
+  $("btnJ").addEventListener("pointerdown",e=>{ e.preventDefault(); keys.j=true; });
+  $("btnAct").addEventListener("pointerdown",e=>{ e.preventDefault(); doAct(); });
+  window.addEventListener("keydown",e=>{
+    if(e.key==="ArrowLeft"||e.key==="a") keys.l=true;
+    if(e.key==="ArrowRight"||e.key==="d") keys.r=true;
+    if(e.key==="ArrowUp"||e.key==="w"||e.key===" ") keys.j=true;
+    if(e.key==="e"||e.key==="Enter") doAct();
+  });
+  window.addEventListener("keyup",e=>{
+    if(e.key==="ArrowLeft"||e.key==="a") keys.l=false;
+    if(e.key==="ArrowRight"||e.key==="d") keys.r=false;
+    if(e.key==="ArrowUp"||e.key==="w"||e.key===" ") keys.j=false;
+  });
+}
+
+function sizeCanvas(){
+  const c=$("stage"); const dpr=devicePixelRatio||1;
+  c.width=innerWidth*dpr; c.height=innerHeight*dpr;
+}
 function startGame(fresh){
-  S = fresh ? blankHold() : (load() || blankHold());
-  $("title").classList.remove("on");
-  $("hold").classList.add("on");
-  renderHold();
-  clearInterval(tickTimer);
-  tickTimer = setInterval(tick, 1000);
-  if (fresh) {
+  S = fresh ? blankHold() : (load()||blankHold());
+  $("title").classList.remove("on"); $("play").classList.add("on");
+  mode="hold"; sizeCanvas(); buildHoldLevel(); renderHud();
+  cancelAnimationFrame(raf); requestAnimationFrame(loop);
+  clearInterval(startGame._t); startGame._t=setInterval(tick,1000);
+  if(fresh){
     $("modal").className="on";
-    $("modal").innerHTML = `<div class="card">
-      <h2>THE FIRST NIGHT</h2>
-      <p>Tap glowing bubbles to harvest. Tap a room to post tribe. Build Dens for beds, a Barracks to march, an Altar to chant.</p>
-      <p>STRAIN: tap a land to zoom the atlas. Tap two blooming lands to grow a mycelium vein. Fog and caravans ride the cords. Converts get unique faces.</p>
-      <p>Wilds: pick a unit (sporeling, bone guard, cap-thrower, vein-walker, convert, seer-spark), tap your village, then a linked node. Living Vein maps generate new layouts each march.</p>
-      <button class="bigbtn" id="oktut">I KEEP THE FIRE</button>
-    </div>`;
-    $("oktut").onclick = ()=> $("modal").className="";
+    $("modal").innerHTML=`<div class="card"><h2>THE FIRST NIGHT</h2>
+      <p>Walk the hold. Stand on a room and tap ACT to post hands or take stores. The shaft is a ladder — jump while touching it to climb.</p>
+      <p>The gate opens the wilds. Wear a body, run the caves, claim the shrine. The altar tends the bloom across the lands.</p>
+      <button class="bigbtn" id="ok">I HEAR THE HEARTH</button></div>`;
+    $("ok").onclick=()=>$("modal").className="";
   }
 }
 
-$("btnNew").onclick = () => startGame(true);
-$("btnCont").onclick = () => startGame(false);
-$("btnPeople").onclick = openPeople;
-$("btnBuild").onclick = () => openBuild(null);
-$("btnWar").onclick = openWar;
-$("btnStrain").onclick = openStrain;
-$("btnLog").onclick = openLog;
-$("btnFlee").onclick = () => { if (battle) endBattle(false); };
-document.querySelectorAll(".pct").forEach(b => b.onclick = () => {
-  sendPct = +b.dataset.p;
-  document.querySelectorAll(".pct").forEach(x=>x.classList.toggle("on", x===b));
-});
-document.querySelectorAll(".unitbtn").forEach(b => b.onclick = () => {
-  sendUnit = b.dataset.u;
-  document.querySelectorAll(".unitbtn").forEach(x=>x.classList.toggle("on", x===b));
-  const u = UNITS[sendUnit];
-  $("bhint").textContent = u.name + " · speed "+u.speed+" · tap source then road";
-});
-if (load()) $("btnCont").style.display = "block";
-drawBattle.bg = new Image();
-drawBattle.bg.src = "art/battle.jpg";
-
-["sheetPeople","sheetBuild","sheetWar","sheetStrain","sheetLog"].forEach(id => {
-  $(id).addEventListener("click", e => { if (e.target.id===id) $(id).classList.remove("on"); });
-});
+window.addEventListener("resize",sizeCanvas);
+bindPads();
+$("btnNew").onclick=()=>startGame(true);
+$("btnCont").onclick=()=>startGame(false);
+if(load()) $("btnCont").style.display="block";
 </script>
 </body>
 </html>

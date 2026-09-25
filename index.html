@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#0b0706" />
+  <title>ASHSPORE — Hold of Fire and Fungus</title>
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    :root {
+      --bg: #0b0706;
+      --cave: #1a100c;
+      --stone: #2a1b14;
+      --stone2: #3a261c;
+      --ember: #ff6a2a;
+      --ember2: #ffb347;
+      --spore: #7dff9a;
+      --dew: #6ec8ff;
+      --spirit: #c9a6ff;
+      --bone: #e8d7b0;
+      --blood: #c44536;
+      --ink: #f4e8d4;
+      --muted: #9a846c;
+      --enemy: #8b4dff;
+      --neutral: #6d6458;
+      --safe: env(safe-area-inset-top, 12px);
+      --safeb: env(safe-area-inset-bottom, 12px);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+      font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+      overflow: hidden; touch-action: manipulation; user-select: none;
+    }
+    #app { height: 100%; display: flex; flex-direction: column; position: relative; }
+    button { font-family: inherit; }
+
+    /* TITLE */
+    .screen { position: absolute; inset: 0; display: none; flex-direction: column; }
+    .screen.on { display: flex; }
+    #title {
+      background:
+        radial-gradient(ellipse at 50% 28%, rgba(255,106,42,.28), transparent 46%),
+        radial-gradient(ellipse at 70% 80%, rgba(125,255,154,.08), transparent 40%),
+        linear-gradient(#120b08, #070504);
+      align-items: center; justify-content: center; text-align: center; padding: 24px;
+    }
+    .logo {
+      font-size: clamp(42px, 12vw, 72px); letter-spacing: .18em; font-weight: 800;
+      color: var(--ember2); text-shadow: 0 0 24px #ff6a2a88, 0 4px 0 #3a1208;
+      margin: 0;
+    }
+    .tag { letter-spacing: .28em; font-size: 11px; color: var(--muted); margin: 6px 0 28px; }
+    .blurb {
+      max-width: 340px; color: #d7c4a6; font-size: 14px; line-height: 1.5; margin-bottom: 28px;
+    }
+    .bigbtn {
+      width: min(86vw, 320px); padding: 16px 18px; border: 0; border-radius: 14px;
+      background: linear-gradient(#ff8a3d, #d44512); color: #2a0d04; font-weight: 800;
+      letter-spacing: .12em; font-size: 16px; box-shadow: 0 8px 0 #6a1c08, 0 12px 30px #ff6a2a44;
+    }
+    .ghost {
+      margin-top: 12px; background: transparent; color: var(--bone); border: 1px solid #5a4030;
+      box-shadow: none; font-weight: 600;
+    }
+    .credits { position: absolute; bottom: calc(16px + var(--safeb)); font-size: 11px; color: #6a5644; }
+
+    /* HUD */
+    #hud {
+      padding: calc(8px + var(--safe)) 10px 8px;
+      background: linear-gradient(#1c120e, #120c0a);
+      border-bottom: 1px solid #3a261c;
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px 10px;
+    }
+    .res {
+      display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
+    }
+    .bar {
+      flex: 1; height: 8px; background: #241610; border-radius: 99px; overflow: hidden;
+      border: 1px solid #3d261c;
+    }
+    .bar > i { display: block; height: 100%; width: 0%; }
+    .ember i { background: linear-gradient(90deg, #c2410c, #ffb347); }
+    .food i { background: linear-gradient(90deg, #3d8b4a, #7dff9a); }
+    .dew i { background: linear-gradient(90deg, #1d6fa5, #6ec8ff); }
+    .spirit i { background: linear-gradient(90deg, #6b3fa0, #c9a6ff); }
+    .pop, .bone, .hap { justify-content: space-between; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    /* VAULT SCROLL */
+    #vaultwrap { flex: 1; overflow-y: auto; overflow-x: hidden; background:
+      repeating-linear-gradient(90deg, #100a08 0 18px, #0e0907 18px 36px);
+    }
+    #vault { padding: 10px 8px 110px; display: flex; flex-direction: column; gap: 10px; }
+    .floor {
+      display: grid; grid-template-columns: 1fr 28px 1fr 1fr; gap: 6px; min-height: 108px;
+    }
+    .floor.gate { grid-template-columns: 1fr 1fr 1fr; }
+    .shaft {
+      background: linear-gradient(#2a1c14, #1a100c);
+      border: 1px solid #4a3224; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: #6a5040; font-size: 10px; writing-mode: vertical-rl;
+    }
+    .room {
+      position: relative; border-radius: 10px; min-height: 108px;
+      background: #1c120e; border: 1px solid #3a281e;
+      overflow: hidden; padding: 8px;
+    }
+    .room.empty {
+      background: repeating-linear-gradient(45deg, #14100c, #14100c 6px, #18120e 6px 12px);
+      color: #5a4638; display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 800;
+    }
+    .room.locked { opacity: .35; pointer-events: none; }
+    .room h3 { margin: 0; font-size: 12px; letter-spacing: .08em; color: var(--bone); }
+    .room .meta { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    .slots { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+    .slot {
+      width: 28px; height: 28px; border-radius: 50%; border: 1px dashed #5a4030;
+      display: grid; place-items: center; font-size: 14px; background: #120c0a;
+    }
+    .slot.filled { border-style: solid; background: #2a1a12; }
+    .bubble {
+      position: absolute; right: 6px; top: 6px; min-width: 28px; height: 28px;
+      border-radius: 99px; background: #ffb347; color: #2a0d04; font-weight: 800;
+      font-size: 12px; display: none; place-items: center; padding: 0 6px;
+      box-shadow: 0 0 12px #ff6a2a88; animation: pop 1.2s ease-in-out infinite;
+    }
+    .bubble.on { display: grid; }
+    @keyframes pop { 50% { transform: scale(1.12); } }
+    .room.hearth { box-shadow: inset 0 0 24px #ff6a2a55; }
+    .room.glowcap { box-shadow: inset 0 0 18px #ffb34733; }
+    .room.sporebed { box-shadow: inset 0 0 18px #7dff9a33; }
+    .room.dewcatcher { box-shadow: inset 0 0 18px #6ec8ff33; }
+    .room.altar { box-shadow: inset 0 0 18px #c9a6ff33; }
+    .room.incident { outline: 2px solid #c44536; animation: shake .4s linear 2; }
+    @keyframes shake { 25% { transform: translateX(-3px);} 75% { transform: translateX(3px);} }
+
+    /* DOCK */
+    #dock {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      padding: 8px 10px calc(10px + var(--safeb));
+      background: linear-gradient(transparent, #0b0706 18%);
+      display: flex; gap: 8px;
+    }
+    .dockbtn {
+      flex: 1; padding: 12px 6px; border-radius: 12px; border: 1px solid #4a3224;
+      background: #1c120e; color: var(--bone); font-weight: 800; font-size: 12px;
+      letter-spacing: .06em;
+    }
+    .dockbtn.hot { background: linear-gradient(#ff8a3d, #d44512); color: #2a0d04; border: 0; }
+
+    /* SHEETS */
+    .sheet {
+      position: absolute; left: 0; right: 0; bottom: 0; max-height: 72%;
+      background: #16100c; border-top: 1px solid #4a3224; border-radius: 18px 18px 0 0;
+      padding: 14px 14px calc(16px + var(--safeb)); display: none; z-index: 20;
+      overflow: auto;
+    }
+    .sheet.on { display: block; }
+    .sheet h2 { margin: 0 0 10px; font-size: 16px; letter-spacing: .1em; }
+    .row { display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      padding: 10px; background: #211610; border-radius: 10px; margin-bottom: 8px; }
+    .row b { font-size: 13px; }
+    .row small { color: var(--muted); display: block; }
+    .mini {
+      padding: 8px 10px; border: 0; border-radius: 8px; background: #3a261c; color: var(--bone);
+      font-weight: 700;
+    }
+    .mini.hot { background: var(--ember); color: #2a0d04; }
+    .pill { font-size: 10px; padding: 2px 6px; border-radius: 99px; background: #2a1a12; color: var(--muted); }
+
+    /* PEOPLE */
+    .face {
+      width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+      background: #2a1a12; border: 1px solid #5a4030; font-size: 18px; flex-shrink: 0;
+    }
+
+    /* BATTLE */
+    #battle { background: #0c0a08; }
+    #bcanvas { width: 100%; flex: 1; display: block; background: #0e0b08; }
+    #bbar {
+      padding: 8px 10px calc(10px + var(--safeb));
+      display: flex; gap: 8px; align-items: center;
+      background: #160f0c; border-top: 1px solid #3a261c;
+    }
+    .pct {
+      width: 46px; height: 40px; border-radius: 10px; border: 1px solid #4a3224;
+      background: #211610; color: var(--bone); font-weight: 800;
+    }
+    .pct.on { background: var(--ember); color: #2a0d04; border: 0; }
+
+    /* TOAST / EVENT */
+    #toast {
+      position: absolute; top: 22%; left: 50%; transform: translateX(-50%);
+      background: #211610ee; border: 1px solid #5a4030; color: var(--bone);
+      padding: 10px 14px; border-radius: 12px; font-size: 13px; display: none; z-index: 40;
+      max-width: 86vw; text-align: center;
+    }
+    #modal {
+      position: absolute; inset: 0; background: #0008; display: none; z-index: 30;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    #modal.on { display: flex; }
+    .card {
+      width: min(92vw, 380px); background: #16100c; border: 1px solid #4a3224;
+      border-radius: 16px; padding: 18px;
+    }
+    .card h2 { margin: 0 0 8px; }
+    .card p { color: #d7c4a6; font-size: 14px; line-height: 1.45; }
+
+    .log { font-size: 12px; color: #cbb89a; max-height: 160px; overflow: auto; }
+    .log div { padding: 4px 0; border-bottom: 1px solid #2a1c16; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <section id="title" class="screen on">
+      <div style="font-size:54px;line-height:1">🔥🍄</div>
+      <h1 class="logo">ASHSPORE</h1>
+      <div class="tag">HOLD • TRIBE • WILD WARS</div>
+      <p class="blurb">
+        A vault cut into dead stone. A hearth the Old Ones cannot snuff.
+        Grow your tribe like Fallout Shelter, keep the rites like Age of Spirits,
+        then pour spore-soldiers across the wilds like Mushroom Wars.
+      </p>
+      <button class="bigbtn" id="btnNew">LIGHT THE HEARTH</button>
+      <button class="bigbtn ghost" id="btnCont" style="display:none">RETURN TO HOLD</button>
+      <div class="credits">Phone-first · offline save · no ads</div>
+    </section>
+
+    <section id="hold" class="screen">
+      <div id="hud"></div>
+      <div id="vaultwrap"><div id="vault"></div></div>
+      <div id="dock">
+        <button class="dockbtn" id="btnPeople">TRIBE</button>
+        <button class="dockbtn" id="btnBuild">BUILD</button>
+        <button class="dockbtn hot" id="btnWar">WILDS</button>
+        <button class="dockbtn" id="btnLog">RITES</button>
+      </div>
+    </section>
+
+    <section id="battle" class="screen">
+      <canvas id="bcanvas"></canvas>
+      <div id="bbar">
+        <button class="pct" data-p="25">25</button>
+        <button class="pct on" data-p="50">50</button>
+        <button class="pct" data-p="75">75</button>
+        <button class="pct" data-p="100">100</button>
+        <div style="flex:1;font-size:12px;color:#cbb89a" id="bhint">Tap a hold, then a linked node.</div>
+        <button class="dockbtn" id="btnFlee">FLEE</button>
+      </div>
+    </section>
+
+    <div id="sheetPeople" class="sheet"></div>
+    <div id="sheetBuild" class="sheet"></div>
+    <div id="sheetWar" class="sheet"></div>
+    <div id="sheetLog" class="sheet"></div>
+    <div id="toast"></div>
+    <div id="modal"></div>
+  </div>
+
+<script>
+const NAMES = ["Ash","Bran","Cinder","Dew","Ember","Flint","Grit","Hearth","Ivy","Jute","Kerr","Lumen","Moss","Nettle","Orin","Pike","Quill","Rook","Sable","Thorn","Ulna","Vex","Wren","Yarrow","Zest"];
+const ICONS = ["🧔","👩","🧑","🧓","👧","👦","🧙","🏹","🪓","🕯️"];
+const ROOM_DEFS = {
+  empty: { name:"Hollow", icon:"＋", cost:{}, slots:0 },
+  hearth: { name:"Hearth", icon:"🔥", cost:{}, slots:2, prod:"spirit", base:1.2, stat:"voice" },
+  glowcap: { name:"Glowcap Pit", icon:"🟡", cost:{bone:40, food:10}, slots:2, prod:"ember", base:2.4, stat:"brawn", unlock:0 },
+  sporebed: { name:"Sporebed", icon:"🍄", cost:{bone:35, ember:8}, slots:2, prod:"food", base:2.2, stat:"craft", unlock:0 },
+  dewcatcher: { name:"Dewcatcher", icon:"💧", cost:{bone:35, ember:8}, slots:2, prod:"dew", base:2.2, stat:"sight", unlock:0 },
+  den: { name:"Den", icon:"🛏️", cost:{bone:50, food:15}, slots:0, pop:4, unlock:0 },
+  altar: { name:"Bone Altar", icon:"🕯️", cost:{bone:70, spirit:8}, slots:2, prod:"spirit", base:1.6, stat:"voice", unlock:6 },
+  barracks: { name:"Spore Barracks", icon:"🛡️", slots:2, cost:{bone:80, food:20}, unlock:8, war:true, stat:"grit" },
+  watchgate: { name:"Watchgate", icon:"🚪", cost:{bone:60}, slots:2, defense:true, stat:"grit", unlock:0 },
+  nursery: { name:"Pairing Hollow", icon:"💞", cost:{bone:90, food:25}, slots:2, breed:true, stat:"voice", unlock:10 },
+};
+const STATS = ["brawn","sight","grit","voice","craft"];
+
+let S = null;
+let tickTimer = null;
+let selectedRoom = null;
+let sendPct = 50;
+let battle = null;
+let raf = 0;
+
+const $ = id => document.getElementById(id);
+function rnd(a,b){ return a + Math.floor(Math.random()*(b-a+1)); }
+function pick(arr){ return arr[rnd(0,arr.length-1)]; }
+function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
+
+function newDweller(role, forced={}) {
+  const n = pick(NAMES) + " " + pick(["Ashborn","Sporekin","Emberfell","Wilds","Bone"]);
+  const d = {
+    id: "d"+Date.now().toString(36)+rnd(10,99),
+    name: n,
+    icon: pick(ICONS),
+    role: role || pick(["hunter","gatherer","seer","guard"]),
+    brawn: rnd(1,4), sight: rnd(1,4), grit: rnd(1,4), voice: rnd(1,4), craft: rnd(1,4),
+    hp: 100, happy: 70, room: null, xp: 0
+  };
+  Object.assign(d, forced);
+  return d;
+}
+
+function blankHold() {
+  const dwellers = [
+    newDweller("chief", { name:"Chief Ashborn", icon:"👑", brawn:4, sight:3, grit:5, voice:6, craft:3, happy:80 }),
+    newDweller("hunter", { name:"Thorn Wilds", icon:"🏹", brawn:3, grit:5, sight:4 }),
+    newDweller("gatherer", { name:"Moss Sporekin", icon:"🧺", craft:5, voice:3 }),
+    newDweller("seer", { name:"Lumen Emberfell", icon:"🕯️", voice:5, sight:4 }),
+  ];
+  const floors = [
+    { id:0, kind:"gate", slots:[
+      { id:"g0", type:"watchgate", lv:1, workers:[], ready:0, hp:100 },
+      { id:"g1", type:"hearth", lv:1, workers:[], ready:0, hp:100 },
+      { id:"g2", type:"empty", lv:1, workers:[], ready:0, hp:100 },
+    ]},
+    { id:1, kind:"cave", slots:[
+      { id:"a0", type:"glowcap", lv:1, workers:[], ready:0, hp:100 },
+      { id:"a1", type:"sporebed", lv:1, workers:[], ready:0, hp:100 },
+      { id:"a2", type:"dewcatcher", lv:1, workers:[], ready:0, hp:100 },
+    ]},
+    { id:2, kind:"cave", slots:[
+      { id:"b0", type:"den", lv:1, workers:[], ready:0, hp:100 },
+      { id:"b1", type:"empty", lv:1, workers:[], ready:0, hp:100 },
+      { id:"b2", type:"empty", lv:1, workers:[], ready:0, hp:100 },
+    ]},
+    { id:3, kind:"cave", locked:true, slots:[
+      { id:"c0", type:"empty", lv:1, workers:[], ready:0, hp:100 },
+      { id:"c1", type:"empty", lv:1, workers:[], ready:0, hp:100 },
+      { id:"c2", type:"empty", lv:1, workers:[], ready:0, hp:100 },
+    ]},
+    { id:4, kind:"cave", locked:true, slots:[
+      { id:"d0", type:"empty", lv:1, workers:[], ready:0, hp:100 },
+      { id:"d1", type:"empty", lv:1, workers:[], ready:0, hp:100 },
+      { id:"d2", type:"empty", lv:1, workers:[], ready:0, hp:100 },
+    ]},
+  ];
+  dwellers[0].room = "g1"; floors[0].slots[1].workers = [dwellers[0].id];
+  dwellers[1].room = "g0"; floors[0].slots[0].workers = [dwellers[1].id];
+  dwellers[2].room = "a1"; floors[1].slots[1].workers = [dwellers[2].id];
+  dwellers[3].room = "a0"; floors[1].slots[0].workers = [dwellers[3].id];
+
+  return {
+    day: 1, t: 0,
+    res: { ember: 48, food: 52, dew: 50, spirit: 12, bone: 80 },
+    cap: { ember: 90, food: 90, dew: 90, spirit: 40 },
+    happiness: 72,
+    dwellers, floors,
+    log: ["The hearth catches. Four souls stand in the dark."],
+    warsWon: 0, unlockedMaps: 1,
+    incident: null,
+    lastSave: Date.now()
+  };
+}
+
+function save(){ localStorage.setItem("ashspore_v1", JSON.stringify(S)); }
+function load(){ try { return JSON.parse(localStorage.getItem("ashspore_v1")); } catch(e){ return null; } }
+
+function allRooms(){
+  const out = [];
+  S.floors.forEach(f => f.slots.forEach(r => out.push({floor:f, room:r})));
+  return out;
+}
+function roomById(id){
+  for (const f of S.floors) for (const r of f.slots) if (r.id===id) return r;
+  return null;
+}
+function popCap(){
+  let n = 6;
+  allRooms().forEach(({room}) => { if (room.type==="den") n += 4 * room.lv; });
+  return n;
+}
+function defense(){
+  let d = 4;
+  allRooms().forEach(({room}) => {
+    if (room.type==="watchgate") {
+      const wr = room.workers.map(id => S.dwellers.find(x=>x.id===id)).filter(Boolean);
+      d += 8*room.lv + wr.reduce((a,w)=>a+w.grit,0);
+    }
+  });
+  return d;
+}
+function idleDwellers(){ return S.dwellers.filter(d => !d.room); }
+
+function consumeAndProduce(dt){
+  const pop = S.dwellers.length;
+  S.res.food = clamp(S.res.food - pop * 0.035 * dt, 0, S.cap.food);
+  S.res.dew  = clamp(S.res.dew  - pop * 0.032 * dt, 0, S.cap.dew);
+  const roomsOn = allRooms().filter(({room,floor}) => room.type!=="empty" && !floor.locked).length;
+  S.res.ember = clamp(S.res.ember - roomsOn * 0.018 * dt, 0, S.cap.ember);
+
+  if (S.res.food < 1 || S.res.dew < 1) S.happiness = Math.max(10, S.happiness - 0.08*dt);
+  if (S.res.ember < 1) S.happiness = Math.max(10, S.happiness - 0.1*dt);
+  else if (S.res.food>20 && S.res.dew>20) S.happiness = Math.min(100, S.happiness + 0.02*dt);
+
+  allRooms().forEach(({room, floor}) => {
+    if (floor.locked || room.type==="empty") return;
+    const def = ROOM_DEFS[room.type];
+    if (!def.prod) return;
+    const wr = room.workers.map(id => S.dwellers.find(x=>x.id===id)).filter(Boolean);
+    const stat = wr.reduce((a,w)=>a+(w[def.stat]||1), 0);
+    const dark = S.res.ember < 1 ? 0.35 : 1;
+    const hap = 0.7 + S.happiness/200;
+    room.ready += (def.base * room.lv + stat*0.35) * dark * hap * dt;
+  });
+
+  if (!S.incident && Math.random() < 0.004*dt) startIncident();
+
+  const nursery = allRooms().find(({room})=>room.type==="nursery" && room.workers.length>=2);
+  if (nursery && S.dwellers.length < popCap() && Math.random() < 0.002*dt) {
+    const baby = newDweller("youth", { icon:"🧒", brawn:1, sight:1, grit:1, voice:2, craft:1, name: pick(NAMES)+" Newborn" });
+    S.dwellers.push(baby);
+    pushLog(baby.name + " draws first breath in the pairing hollow.");
+    toast("A child of the hold is born.");
+  }
+}
+
+function collectRoom(room){
+  const def = ROOM_DEFS[room.type];
+  if (!def.prod || room.ready < 8) return;
+  const amt = Math.floor(room.ready);
+  room.ready = 0;
+  S.res[def.prod] = clamp(S.res[def.prod] + amt, 0, S.cap[def.prod] || 99);
+  if (Math.random()<0.35) S.res.bone += rnd(1,4);
+  room.workers.forEach(id => { const d=S.dwellers.find(x=>x.id===id); if(d) d.xp += 1; });
+  renderHold();
+}
+
+function startIncident(){
+  const kinds = [
+    { id:"raid", title:"Wild-raiders at the gate", text:"Ash-painted savages beat the Watchgate. Staff it or lose bone and blood." },
+    { id:"rot", title:"Spore-rot", text:"The beds blacken. Food stores bleed unless a crafter tends them." },
+    { id:"whisper", title:"The Old Ones whisper", text:"Happiness frays. An altar or hearth voice can hold the tribe." },
+    { id:"drought", title:"Dew dries", text:"The catchers cough dust. Dew drains until the incident ends." },
+  ];
+  S.incident = { ...pick(kinds), t: 28 };
+  pushLog(S.incident.title + ".");
+  toast(S.incident.title);
+}
+
+function resolveIncident(dt){
+  if (!S.incident) return;
+  S.incident.t -= dt;
+  if (S.incident.id==="raid") {
+    if (Math.random()<0.08*dt) {
+      const dmg = Math.max(0, rnd(4,12) - defense()/8);
+      if (dmg>0) {
+        const vic = pick(S.dwellers);
+        vic.hp = Math.max(0, vic.hp - dmg*4);
+        S.res.bone = Math.max(0, S.res.bone - rnd(2,6));
+        if (vic.hp<=0) {
+          pushLog(vic.name + " falls at the gate.");
+          unassign(vic);
+          S.dwellers = S.dwellers.filter(d=>d.id!==vic.id);
+        }
+      }
+    }
+  }
+  if (S.incident.id==="rot") S.res.food = Math.max(0, S.res.food - 0.12*dt);
+  if (S.incident.id==="drought") S.res.dew = Math.max(0, S.res.dew - 0.12*dt);
+  if (S.incident.id==="whisper") S.happiness = Math.max(8, S.happiness - 0.15*dt);
+  if (S.incident.t <= 0) {
+    pushLog(S.incident.title + " fades.");
+    S.incident = null;
+  }
+}
+
+function unassign(d){
+  if (!d.room) return;
+  const r = roomById(d.room);
+  if (r) r.workers = r.workers.filter(id=>id!==d.id);
+  d.room = null;
+}
+function assign(d, room){
+  const def = ROOM_DEFS[room.type];
+  if (!def.slots) return toast("No posts in that room.");
+  if (room.workers.length >= def.slots + (room.lv-1)) return toast("Room is full.");
+  unassign(d);
+  d.room = room.id;
+  room.workers.push(d.id);
+}
+
+function pushLog(t){ S.log.unshift("Day "+S.day+": "+t); S.log = S.log.slice(0,40); }
+
+function toast(t){
+  const el = $("toast"); el.textContent = t; el.style.display = "block";
+  clearTimeout(toast._t); toast._t = setTimeout(()=> el.style.display="none", 2200);
+}
+
+function renderHud(){
+  const p = S.dwellers.length, cap = popCap();
+  $("hud").innerHTML = `
+    <div class="res ember"><span class="dot" style="background:var(--ember)"></span>EM <div class="bar"><i style="width:${S.res.ember/S.cap.ember*100}%"></i></div>${Math.floor(S.res.ember)}</div>
+    <div class="res food"><span class="dot" style="background:var(--spore)"></span>FD <div class="bar"><i style="width:${S.res.food/S.cap.food*100}%"></i></div>${Math.floor(S.res.food)}</div>
+    <div class="res dew"><span class="dot" style="background:var(--dew)"></span>DW <div class="bar"><i style="width:${S.res.dew/S.cap.dew*100}%"></i></div>${Math.floor(S.res.dew)}</div>
+    <div class="res spirit"><span class="dot" style="background:var(--spirit)"></span>SP <div class="bar"><i style="width:${S.res.spirit/S.cap.spirit*100}%"></i></div>${Math.floor(S.res.spirit)}</div>
+    <div class="res pop">👥 ${p}/${cap}</div>
+    <div class="res bone">🦴 ${Math.floor(S.res.bone)} · 😊 ${Math.floor(S.happiness)} · Day ${S.day}</div>
+  `;
+}
+
+function renderHold(){
+  renderHud();
+  const v = $("vault");
+  v.innerHTML = "";
+  if (S.incident) {
+    const banner = document.createElement("div");
+    banner.style.cssText = "background:#3a1210;border:1px solid #c44536;border-radius:10px;padding:8px 10px;font-size:12px";
+    banner.textContent = "⚠ " + S.incident.title + " · " + Math.ceil(S.incident.t) + "s";
+    v.appendChild(banner);
+  }
+  S.floors.forEach(f => {
+    const row = document.createElement("div");
+    row.className = "floor" + (f.kind==="gate" ? " gate" : "");
+    const cells = [];
+    f.slots.forEach((room, i) => {
+      if (f.kind!=="gate" && i===1) {
+        const sh = document.createElement("div");
+        sh.className = "shaft"; sh.textContent = f.locked ? "LOCKED" : "SHAFT";
+        cells.push(sh);
+      }
+      const el = document.createElement("div");
+      const def = ROOM_DEFS[room.type] || ROOM_DEFS.empty;
+      el.className = "room " + room.type + (f.locked?" locked":"") + (S.incident && room.type==="watchgate" && S.incident.id==="raid" ? " incident":"");
+      if (room.type==="empty" && !f.locked) {
+        el.classList.add("empty");
+        el.textContent = "＋";
+        el.onclick = () => openBuild(room);
+      } else if (!f.locked) {
+        const wr = room.workers.map(id => S.dwellers.find(x=>x.id===id)).filter(Boolean);
+        el.innerHTML = `<h3>${def.icon} ${def.name}  <span class="pill">Lv${room.lv}</span></h3>
+          <div class="meta">${def.prod ? def.prod.toUpperCase()+" +"+(def.base*room.lv).toFixed(1) : (def.pop? ("+"+(def.pop*room.lv)+" beds") : (def.war?"Expeditions": def.defense?"Defense "+defense(): ""))}</div>
+          <div class="slots">${Array.from({length: (def.slots||0)+(room.lv-1)}).map((_,i)=> {
+            const w = wr[i];
+            return `<div class="slot ${w?"filled":""}" title="${w?w.name:""}">${w?w.icon:""}</div>`;
+          }).join("")}</div>
+          <div class="bubble ${room.ready>=8?"on":""}">${room.ready>=8?Math.floor(room.ready):""}</div>`;
+        el.onclick = (e) => {
+          if (room.ready>=8 && def.prod) { collectRoom(room); return; }
+          openRoom(room);
+        };
+      } else {
+        el.classList.add("empty"); el.textContent = "🔒";
+        el.onclick = () => {
+          if (S.res.bone >= 120 && S.dwellers.length >= 8) {
+            f.locked = false; S.res.bone -= 120; S.cap.ember += 30; S.cap.food += 30; S.cap.dew += 30;
+            pushLog("A new depth of the hold is carved.");
+            renderHold();
+          } else toast("Need 120 bone and 8 tribe to dig deeper.");
+        };
+      }
+      cells.push(el);
+    });
+    cells.forEach(c => row.appendChild(c));
+    v.appendChild(row);
+  });
+}
+
+function closeSheets(){
+  ["sheetPeople","sheetBuild","sheetWar","sheetLog"].forEach(id => $(id).classList.remove("on"));
+}
+function openRoom(room){
+  closeSheets();
+  selectedRoom = room;
+  const def = ROOM_DEFS[room.type];
+  const el = $("sheetPeople");
+  const wr = room.workers.map(id => S.dwellers.find(x=>x.id===id)).filter(Boolean);
+  el.classList.add("on");
+  el.innerHTML = `<h2>${def.icon} ${def.name}</h2>
+    <div class="row"><div><b>Level ${room.lv}</b><small>Upgrade uses bone and idle hands.</small></div>
+      <button class="mini hot" id="upRoom">UPGRADE ${30*room.lv}🦴</button></div>
+    <div style="margin:8px 0;color:var(--muted);font-size:12px">Assigned</div>
+    ${wr.map(d=>personRow(d, true)).join("") || "<div class='row'><small>No one posted.</small></div>"}
+    <div style="margin:8px 0;color:var(--muted);font-size:12px">Idle tribe</div>
+    ${idleDwellers().map(d=>personRow(d,false)).join("") || "<div class='row'><small>Everyone is working.</small></div>"}
+    <button class="mini" style="width:100%;margin-top:8px" onclick="document.getElementById('sheetPeople').classList.remove('on')">CLOSE</button>`;
+  $("upRoom").onclick = () => {
+    const cost = 30*room.lv;
+    if (S.res.bone < cost) return toast("Not enough bone.");
+    if (room.lv>=3) return toast("Max level.");
+    S.res.bone -= cost; room.lv++; renderHold(); openRoom(room);
+  };
+  el.querySelectorAll("[data-assign]").forEach(btn => {
+    btn.onclick = () => {
+      const d = S.dwellers.find(x=>x.id===btn.dataset.assign);
+      assign(d, room); renderHold(); openRoom(room);
+    };
+  });
+  el.querySelectorAll("[data-free]").forEach(btn => {
+    btn.onclick = () => {
+      const d = S.dwellers.find(x=>x.id===btn.dataset.free);
+      unassign(d); renderHold(); openRoom(room);
+    };
+  });
+}
+function personRow(d, assigned){
+  return `<div class="row">
+    <div class="face">${d.icon}</div>
+    <div style="flex:1"><b>${d.name}</b><small>B${d.brawn} S${d.sight} G${d.grit} V${d.voice} C${d.craft} · HP ${Math.floor(d.hp)}</small></div>
+    <button class="mini" data-${assigned?"free":"assign"}="${d.id}">${assigned?"PULL":"POST"}</button>
+  </div>`;
+}
+
+function openPeople(){
+  closeSheets();
+  const el = $("sheetPeople"); el.classList.add("on");
+  el.innerHTML = `<h2>TRIBE · ${S.dwellers.length}/${popCap()}</h2>
+    ${S.dwellers.map(d=>`<div class="row">
+      <div class="face">${d.icon}</div>
+      <div style="flex:1"><b>${d.name}</b><small>${d.role} · ${d.room? (ROOM_DEFS[roomById(d.room).type].name) : "idle"} · B${d.brawn} S${d.sight} G${d.grit} V${d.voice} C${d.craft}</small></div>
+    </div>`).join("")}
+    <button class="mini" style="width:100%" onclick="document.getElementById('sheetPeople').classList.remove('on')">CLOSE</button>`;
+}
+
+function openBuild(targetRoom){
+  closeSheets();
+  const el = $("sheetBuild"); el.classList.add("on");
+  const types = Object.keys(ROOM_DEFS).filter(k => k!=="empty" && k!=="hearth");
+  el.innerHTML = `<h2>CARVE A ROOM</h2>
+    ${types.map(k=>{
+      const d = ROOM_DEFS[k];
+      const need = S.dwellers.length >= (d.unlock||0);
+      const cost = Object.entries(d.cost||{}).map(([a,b])=>b+a[0].toUpperCase()).join(" ");
+      return `<div class="row"><div><b>${d.icon} ${d.name}</b><small>${cost || "free"} ${need?"":"· locked"}</small></div>
+        <button class="mini hot" data-build="${k}" ${need?"":"disabled"}>RAISE</button></div>`;
+    }).join("")}
+    <button class="mini" style="width:100%" onclick="document.getElementById('sheetBuild').classList.remove('on')">CLOSE</button>`;
+  el.querySelectorAll("[data-build]").forEach(btn => {
+    btn.onclick = () => {
+      const k = btn.dataset.build;
+      const d = ROOM_DEFS[k];
+      for (const [res,amt] of Object.entries(d.cost||{})) {
+        if ((S.res[res]||0) < amt) return toast("Need more "+res+".");
+      }
+      if (!targetRoom || targetRoom.type!=="empty") {
+        const hollow = allRooms().find(x => !x.floor.locked && x.room.type==="empty");
+        if (!hollow) return toast("No hollow left. Dig deeper.");
+        targetRoom = hollow.room;
+      }
+      for (const [res,amt] of Object.entries(d.cost||{})) S.res[res]-=amt;
+      targetRoom.type = k; targetRoom.lv = 1; targetRoom.workers=[]; targetRoom.ready=0;
+      pushLog("Raised a "+d.name+".");
+      closeSheets(); renderHold();
+    };
+  });
+}
+
+const MAPS = [
+  { id:"glen", name:"Ashen Glen", threat:1, spirit:4, reward:{bone:25, food:12},
+    nodes:[
+      {id:0,x:.18,y:.55,type:"village",owner:"player",n:18,lv:1},
+      {id:1,x:.38,y:.32,type:"village",owner:"neutral",n:8,lv:1},
+      {id:2,x:.40,y:.72,type:"tower",owner:"neutral",n:10,lv:1},
+      {id:3,x:.62,y:.48,type:"village",owner:"neutral",n:12,lv:1},
+      {id:4,x:.82,y:.38,type:"village",owner:"enemy",n:16,lv:1},
+      {id:5,x:.78,y:.70,type:"forge",owner:"enemy",n:8,lv:1},
+    ],
+    edges:[[0,1],[0,2],[1,3],[2,3],[3,4],[3,5],[4,5]]
+  },
+  { id:"ribs", name:"Rib-Cairn", threat:2, spirit:8, reward:{bone:40, spirit:6, food:10},
+    nodes:[
+      {id:0,x:.14,y:.50,type:"village",owner:"player",n:22,lv:2},
+      {id:1,x:.32,y:.28,type:"tower",owner:"neutral",n:12,lv:1},
+      {id:2,x:.34,y:.72,type:"village",owner:"neutral",n:10,lv:1},
+      {id:3,x:.52,y:.50,type:"forge",owner:"neutral",n:8,lv:1},
+      {id:4,x:.70,y:.28,type:"village",owner:"enemy",n:18,lv:1},
+      {id:5,x:.72,y:.72,type:"tower",owner:"enemy",n:14,lv:1},
+      {id:6,x:.88,y:.50,type:"village",owner:"enemy",n:20,lv:2},
+    ],
+    edges:[[0,1],[0,2],[1,3],[2,3],[3,4],[3,5],[4,6],[5,6],[1,4],[2,5]]
+  },
+  { id:"oldone", name:"Mouth of the Old One", threat:3, spirit:14, reward:{bone:70, spirit:12},
+    nodes:[
+      {id:0,x:.12,y:.55,type:"village",owner:"player",n:26,lv:2},
+      {id:1,x:.30,y:.30,type:"village",owner:"neutral",n:14,lv:1},
+      {id:2,x:.30,y:.78,type:"tower",owner:"neutral",n:16,lv:1},
+      {id:3,x:.50,y:.50,type:"forge",owner:"neutral",n:10,lv:1},
+      {id:4,x:.50,y:.22,type:"tower",owner:"enemy",n:18,lv:2},
+      {id:5,x:.70,y:.38,type:"village",owner:"enemy",n:22,lv:2},
+      {id:6,x:.70,y:.70,type:"village",owner:"enemy",n:18,lv:1},
+      {id:7,x:.88,y:.52,type:"village",owner:"enemy",n:28,lv:2},
+    ],
+    edges:[[0,1],[0,2],[1,3],[2,3],[1,4],[3,5],[3,6],[4,5],[5,7],[6,7],[2,6]]
+  }
+];
+
+function openWar(){
+  closeSheets();
+  const el = $("sheetWar"); el.classList.add("on");
+  const hasBarracks = allRooms().some(({room,floor})=>room.type==="barracks" && !floor.locked);
+  el.innerHTML = `<h2>THE WILDS</h2>
+    <p style="color:#cbb89a;font-size:13px">Send spore-soldiers down the mycelium roads. Capture every node. Bring home bone, food, and lost kin.</p>
+    ${!hasBarracks ? "<div class='row'><small>Raise a Spore Barracks to march farther maps. Glen is open.</small></div>":""}
+    ${MAPS.map((m,i)=>{
+      const lock = i>0 && !hasBarracks && i>=S.unlockedMaps;
+      return `<div class="row"><div><b>${m.name}</b><small>Threat ${m.threat} · costs ${m.spirit} spirit</small></div>
+        <button class="mini hot" data-map="${m.id}" ${lock?"disabled":""}>MARCH</button></div>`;
+    }).join("")}
+    <button class="mini" style="width:100%" onclick="document.getElementById('sheetWar').classList.remove('on')">CLOSE</button>`;
+  el.querySelectorAll("[data-map]").forEach(btn => btn.onclick = () => startBattle(btn.dataset.map));
+}
+
+function openLog(){
+  closeSheets();
+  const el = $("sheetLog"); el.classList.add("on");
+  const riteCost = 10;
+  el.innerHTML = `<h2>RITES & MEMORY</h2>
+    <div class="row"><div><b>Rite of Warmth</b><small>Spend 10 spirit. +12 happiness, +8 ember.</small></div>
+      <button class="mini hot" id="rite">CHANT</button></div>
+    <div class="row"><div><b>Awaken a Savage</b><small>Spend 18 spirit + 20 bone. A lost soul joins the hold.</small></div>
+      <button class="mini hot" id="awaken">AWAKEN</button></div>
+    <div class="log">${S.log.map(x=>"<div>"+x+"</div>").join("")}</div>
+    <button class="mini" style="width:100%;margin-top:8px" onclick="document.getElementById('sheetLog').classList.remove('on')">CLOSE</button>`;
+  $("rite").onclick = () => {
+    if (S.res.spirit < riteCost) return toast("The altar is dry.");
+    S.res.spirit -= riteCost; S.happiness = Math.min(100, S.happiness+12);
+    S.res.ember = clamp(S.res.ember+8,0,S.cap.ember);
+    if (S.incident && S.incident.id==="whisper") S.incident.t = Math.min(S.incident.t, 4);
+    pushLog("The tribe chants the Rite of Warmth.");
+    renderHold(); openLog();
+  };
+  $("awaken").onclick = () => {
+    if (S.res.spirit < 18 || S.res.bone < 20) return toast("Need spirit and bone.");
+    if (S.dwellers.length >= popCap()) return toast("No beds. Build a Den.");
+    S.res.spirit -= 18; S.res.bone -= 20;
+    const d = newDweller("awakened");
+    S.dwellers.push(d);
+    pushLog("Awakened "+d.name+" from the wild dark.");
+    toast(d.name+" joins the hearth.");
+    renderHold(); openLog();
+  };
+}
+
+function startBattle(mapId){
+  const map = MAPS.find(m=>m.id===mapId);
+  if (S.res.spirit < map.spirit) return toast("Not enough spirit to march.");
+  S.res.spirit -= map.spirit;
+  closeSheets();
+  $("hold").classList.remove("on");
+  $("battle").classList.add("on");
+  const nodes = map.nodes.map(n => ({...n, n:n.n, cooldown:0}));
+  const gritBoost = S.dwellers.reduce((a,d)=>a+d.grit,0);
+  nodes.filter(n=>n.owner==="player").forEach(n => n.n = Math.floor(n.n + gritBoost*0.35));
+  battle = {
+    map, nodes, edges: map.edges,
+    waves: [], selected: null, t: 0, over: false,
+    atkMul: 1 + Math.min(0.4, gritBoost/80)
+  };
+  bindCanvas();
+  loopBattle();
+}
+
+function bindCanvas(){
+  const c = $("bcanvas");
+  const resize = () => {
+    const r = c.getBoundingClientRect();
+    c.width = r.width * devicePixelRatio;
+    c.height = (window.innerHeight - 64) * devicePixelRatio;
+    c.style.height = (window.innerHeight - 64) + "px";
+  };
+  resize();
+  c.onclick = ev => {
+    if (!battle || battle.over) return;
+    const rect = c.getBoundingClientRect();
+    const x = (ev.clientX-rect.left)/rect.width;
+    const y = (ev.clientY-rect.top)/rect.height;
+    let hit = null, best=1;
+    battle.nodes.forEach(n => {
+      const d = Math.hypot(n.x-x, n.y-y);
+      if (d<0.08 && d<best){ best=d; hit=n; }
+    });
+    if (!hit) { battle.selected=null; return; }
+    if (!battle.selected) {
+      if (hit.owner!=="player") { toast("That node is not yours."); return; }
+      battle.selected = hit.id;
+    } else if (battle.selected===hit.id) {
+      // upgrade village if player and enough
+      if (hit.owner==="player" && hit.type==="village" && hit.n>=12 && hit.lv<3) {
+        hit.n -= 10; hit.lv++; toast("Village raised to lv"+hit.lv);
+      } else battle.selected = null;
+    } else {
+      const linked = battle.edges.some(([a,b]) =>
+        (a===battle.selected && b===hit.id) || (b===battle.selected && a===hit.id));
+      if (!linked) { toast("No mycelium road."); return; }
+      sendWave(battle.selected, hit.id);
+      battle.selected = null;
+    }
+  };
+}
+
+function sendWave(fromId, toId){
+  const from = battle.nodes[fromId];
+  const amt = Math.max(1, Math.floor(from.n * sendPct/100));
+  if (from.n-amt < 0) return;
+  from.n -= amt;
+  battle.waves.push({
+    from: fromId, to: toId, owner: from.owner, n: amt, p: 0, speed: 0.55
+  });
+}
+
+function enemyAI(dt){
+  battle._ai = (battle._ai||0) + dt;
+  if (battle._ai < 1.3) return;
+  battle._ai = 0;
+  const mine = battle.nodes.filter(n=>n.owner==="enemy" && n.n>8);
+  if (!mine.length) return;
+  const src = pick(mine);
+  const links = battle.edges.filter(([a,b])=>a===src.id||b===src.id)
+    .map(([a,b])=> battle.nodes[a===src.id?b:a]);
+  const target = links.sort((a,b)=>{
+    const score = n => (n.owner==="player"?3:n.owner==="neutral"?2:0) + (n.type==="village"?1:0) - n.n/40;
+    return score(b)-score(a);
+  })[0];
+  if (!target) return;
+  const pct = target.owner==="enemy" ? 0.3 : 0.55;
+  const amt = Math.max(1, Math.floor(src.n*pct));
+  src.n -= amt;
+  battle.waves.push({ from:src.id, to:target.id, owner:"enemy", n:amt, p:0, speed:0.5 });
+}
+
+function stepBattle(dt){
+  if (!battle || battle.over) return;
+  battle.t += dt;
+  battle.nodes.forEach(n => {
+    if (n.type==="village") {
+      const cap = 15 + n.lv*12;
+      const rate = (n.owner==="neutral"?0.6 : 1.1 + n.lv*0.35);
+      if (n.n < cap) n.n = Math.min(cap, n.n + rate*dt);
+    }
+    if (n.type==="tower" && n.owner!=="neutral") {
+      battle.waves.forEach(w => {
+        if (w.owner===n.owner) return;
+        const midOk = w.p>0.15 && w.p<0.85;
+        const near = battle.edges.some(([a,b])=> (a===n.id||b===n.id) && (a===w.from||b===w.from||a===w.to||b===w.to));
+        if (midOk && near && Math.random()<0.5*dt) w.n = Math.max(0, w.n - (1.2+n.lv));
+      });
+    }
+  });
+  const forgeBonus = {};
+  battle.nodes.forEach(n => { if (n.type==="forge" && n.owner!=="neutral") forgeBonus[n.owner]=(forgeBonus[n.owner]||1)+0.18; });
+
+  battle.waves.forEach(w => { w.p += w.speed * dt; });
+  const left = [];
+  battle.waves.forEach(w => {
+    if (w.n<=0) return;
+    if (w.p < 1) { left.push(w); return; }
+    const dest = battle.nodes[w.to];
+    const mul = (forgeBonus[w.owner]||1) * (w.owner==="player"? battle.atkMul : 1);
+    const force = w.n * mul;
+    if (dest.owner === w.owner) dest.n += w.n;
+    else {
+      dest.n -= force;
+      if (dest.n <= 0) {
+        dest.owner = w.owner;
+        dest.n = Math.max(1, Math.floor(-dest.n));
+      }
+    }
+  });
+  battle.waves = left.filter(w=>w.n>0);
+  enemyAI(dt);
+
+  const owners = new Set(battle.nodes.map(n=>n.owner));
+  if (!owners.has("enemy") && !battle.waves.some(w=>w.owner==="enemy")) endBattle(true);
+  if (!owners.has("player") && !battle.waves.some(w=>w.owner==="player")) endBattle(false);
+}
+
+function endBattle(win){
+  if (!battle || battle.over) return;
+  battle.over = true;
+  cancelAnimationFrame(raf);
+  const map = battle.map;
+  $("modal").className = "on";
+  if (win) {
+    S.warsWon++;
+    S.unlockedMaps = Math.max(S.unlockedMaps, MAPS.findIndex(m=>m.id===map.id)+2);
+    for (const [k,v] of Object.entries(map.reward)) S.res[k] = clamp((S.res[k]||0)+v, 0, S.cap[k]||999);
+    let extra = "";
+    if (S.dwellers.length < popCap() && Math.random()<0.65) {
+      const d = newDweller("awakened");
+      S.dwellers.push(d);
+      extra = `<p>${d.icon} ${d.name} crawled from a captured village to your hearth.</p>`;
+    }
+    pushLog("Victory in "+map.name+".");
+    $("modal").innerHTML = `<div class="card"><h2>THE NODE FALLS</h2>
+      <p>${map.name} is yours. Bone and forage come home.</p>${extra}
+      <button class="bigbtn" id="leaveWar">RETURN TO HOLD</button></div>`;
+  } else {
+    S.happiness = Math.max(15, S.happiness-8);
+    pushLog("Routed in "+map.name+".");
+    $("modal").innerHTML = `<div class="card"><h2>THE DARK TAKES THEM</h2>
+      <p>Your warband breaks. The hearth still burns. Train grit. March again.</p>
+      <button class="bigbtn" id="leaveWar">RETURN TO HOLD</button></div>`;
+  }
+  $("leaveWar").onclick = leaveBattle;
+}
+
+function leaveBattle(){
+  $("modal").className = "";
+  $("battle").classList.remove("on");
+  $("hold").classList.add("on");
+  battle = null;
+  renderHold();
+}
+
+function loopBattle(){
+  const c = $("bcanvas");
+  const ctx = c.getContext("2d");
+  let last = performance.now();
+  const step = now => {
+    if (!battle) return;
+    const dt = Math.min(0.05, (now-last)/1000); last = now;
+    stepBattle(dt);
+    drawBattle(ctx, c);
+    if (!battle.over) raf = requestAnimationFrame(step);
+  };
+  raf = requestAnimationFrame(step);
+}
+
+function drawBattle(ctx, c){
+  const w=c.width, h=c.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle = "#0e0b08"; ctx.fillRect(0,0,w,h);
+  // veins
+  ctx.strokeStyle = "#3a2a1c"; ctx.lineWidth = 3*devicePixelRatio;
+  battle.edges.forEach(([a,b])=>{
+    const A=battle.nodes[a], B=battle.nodes[b];
+    ctx.beginPath(); ctx.moveTo(A.x*w, A.y*h); ctx.lineTo(B.x*w, B.y*h); ctx.stroke();
+  });
+  battle.waves.forEach(wave=>{
+    const A=battle.nodes[wave.from], B=battle.nodes[wave.to];
+    const x = (A.x + (B.x-A.x)*wave.p)*w;
+    const y = (A.y + (B.y-A.y)*wave.p)*h;
+    ctx.fillStyle = wave.owner==="player" ? "#ff8a3d" : wave.owner==="enemy" ? "#8b4dff" : "#888";
+    ctx.beginPath(); ctx.arc(x,y, 7*devicePixelRatio + Math.min(10, wave.n/6), 0, 6.28); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.font = (10*devicePixelRatio)+"px sans-serif";
+    ctx.fillText(Math.floor(wave.n), x-6*devicePixelRatio, y+4*devicePixelRatio);
+  });
+  battle.nodes.forEach(n=>{
+    const x=n.x*w, y=n.y*h, r=22*devicePixelRatio;
+    const col = n.owner==="player"?"#ff8a3d": n.owner==="enemy"?"#8b4dff":"#6d6458";
+    ctx.beginPath(); ctx.arc(x,y,r,0,6.28);
+    ctx.fillStyle = "#1a120e"; ctx.fill();
+    ctx.lineWidth = (battle.selected===n.id?5:3)*devicePixelRatio;
+    ctx.strokeStyle = col; ctx.stroke();
+    ctx.fillStyle = col; ctx.font = (11*devicePixelRatio)+"px sans-serif";
+    ctx.textAlign="center";
+    const icon = n.type==="tower"?"🗼": n.type==="forge"?"⚒️":"🍄";
+    ctx.fillText(icon+" "+Math.floor(n.n), x, y+4*devicePixelRatio);
+    ctx.fillStyle = "#e8d7b0"; ctx.font = (8*devicePixelRatio)+"px sans-serif";
+    ctx.fillText(n.type+" L"+n.lv, x, y+r+12*devicePixelRatio);
+  });
+}
+
+function tick(){
+  if (!S) return;
+  const dt = 1;
+  S.t += dt;
+  if (S.t % 60 === 0) S.day++;
+  consumeAndProduce(dt);
+  resolveIncident(dt);
+  S.dwellers.forEach(d => { if (d.hp<100) d.hp = Math.min(100, d.hp+0.15*dt); });
+  if (S.t % 8 === 0) save();
+  if ($("hold").classList.contains("on")) renderHold();
+}
+
+function startGame(fresh){
+  S = fresh ? blankHold() : (load() || blankHold());
+  $("title").classList.remove("on");
+  $("hold").classList.add("on");
+  renderHold();
+  clearInterval(tickTimer);
+  tickTimer = setInterval(tick, 1000);
+  if (fresh) {
+    $("modal").className="on";
+    $("modal").innerHTML = `<div class="card">
+      <h2>THE FIRST NIGHT</h2>
+      <p>Tap glowing bubbles to harvest. Tap a room to post tribe. Build Dens for beds, a Barracks to march, an Altar to chant.</p>
+      <p>In the Wilds: tap your mushroom village, then a linked node. Send 50%. Double-tap a village to upgrade it with 10 soldiers.</p>
+      <button class="bigbtn" id="oktut">I KEEP THE FIRE</button>
+    </div>`;
+    $("oktut").onclick = ()=> $("modal").className="";
+  }
+}
+
+$("btnNew").onclick = () => startGame(true);
+$("btnCont").onclick = () => startGame(false);
+$("btnPeople").onclick = openPeople;
+$("btnBuild").onclick = () => openBuild(null);
+$("btnWar").onclick = openWar;
+$("btnLog").onclick = openLog;
+$("btnFlee").onclick = () => { if (battle) endBattle(false); };
+document.querySelectorAll(".pct").forEach(b => b.onclick = () => {
+  sendPct = +b.dataset.p;
+  document.querySelectorAll(".pct").forEach(x=>x.classList.toggle("on", x===b));
+});
+if (load()) $("btnCont").style.display = "block";
+
+["sheetPeople","sheetBuild","sheetWar","sheetLog"].forEach(id => {
+  $(id).addEventListener("click", e => { if (e.target.id===id) $(id).classList.remove("on"); });
+});
+</script>
+</body>
+</html>

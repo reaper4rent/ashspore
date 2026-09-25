@@ -1,0 +1,9 @@
+{
+  "name": "ASHSPORE",
+  "short_name": "Ashspore",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b0706",
+  "theme_color": "#0b0706",
+  "orientation": "portrait"
+}

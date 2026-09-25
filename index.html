@@ -24,7 +24,8 @@
       --blood: #c44536;
       --ink: #f4e8d4;
       --muted: #9a846c;
-      --enemy: #8b4dff;
+      --plague: #6dff7a;
+      --dead: #4a1020;
       --neutral: #6d6458;
       --safe: env(safe-area-inset-top, 12px);
       --safeb: env(safe-area-inset-bottom, 12px);
@@ -88,7 +89,26 @@
     .dew i { background: linear-gradient(90deg, #1d6fa5, #6ec8ff); }
     .spirit i { background: linear-gradient(90deg, #6b3fa0, #c9a6ff); }
     .pop, .bone, .hap { justify-content: space-between; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .news {
+      grid-column: 1 / -1; font-size: 11px; color: #c9e8b8; letter-spacing: .04em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    #worldwrap { position: relative; height: 300px; background:
+      radial-gradient(ellipse at 50% 50%, #1a2414, #0b0706 70%);
+      border: 1px solid #2a3a20; border-radius: 12px; margin: 8px 0 10px; overflow: hidden;
+    }
+    .region {
+      position: absolute; width: 58px; height: 58px; border-radius: 50%;
+      border: 2px solid #4a5a38; background: #1a1810; display: flex;
+      flex-direction: column; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 800; color: var(--bone); text-align: center;
+      line-height: 1.1; transform: translate(-50%,-50%);
+    }
+    .region.hot { box-shadow: 0 0 16px #6dff7a88; }
+    .statgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+    .statbox { background: #211610; border-radius: 8px; padding: 8px; text-align: center; }
+    .statbox b { display: block; font-size: 16px; color: var(--spore); }
+    .statbox small { color: var(--muted); }
 
     /* VAULT SCROLL */
     #vaultwrap { flex: 1; overflow-y: auto; overflow-x: hidden; background:
@@ -225,8 +245,9 @@
       <div class="tag">HOLD • TRIBE • WILD WARS</div>
       <p class="blurb">
         A vault cut into dead stone. A hearth the Old Ones cannot snuff.
-        Grow your tribe like Fallout Shelter, keep the rites like Age of Spirits,
-        then pour spore-soldiers across the wilds like Mushroom Wars.
+        Grow your tribe, keep the rites, pour spore-soldiers across the wilds —
+        then evolve the Ashspore itself like a living plague. Spread. Hide. Convert.
+        Outrun the cleanse.
       </p>
       <button class="bigbtn" id="btnNew">LIGHT THE HEARTH</button>
       <button class="bigbtn ghost" id="btnCont" style="display:none">RETURN TO HOLD</button>
@@ -240,6 +261,7 @@
         <button class="dockbtn" id="btnPeople">TRIBE</button>
         <button class="dockbtn" id="btnBuild">BUILD</button>
         <button class="dockbtn hot" id="btnWar">WILDS</button>
+        <button class="dockbtn" id="btnStrain">STRAIN</button>
         <button class="dockbtn" id="btnLog">RITES</button>
       </div>
     </section>
@@ -259,6 +281,7 @@
     <div id="sheetPeople" class="sheet"></div>
     <div id="sheetBuild" class="sheet"></div>
     <div id="sheetWar" class="sheet"></div>
+    <div id="sheetStrain" class="sheet"></div>
     <div id="sheetLog" class="sheet"></div>
     <div id="toast"></div>
     <div id="modal"></div>
@@ -280,6 +303,62 @@ const ROOM_DEFS = {
   nursery: { name:"Pairing Hollow", icon:"💞", cost:{bone:90, food:25}, slots:2, breed:true, stat:"voice", unlock:10 },
 };
 const STATS = ["brawn","sight","grit","voice","craft"];
+
+const REGIONS = [
+  { id:"glen", name:"Ashen Glen", x:50, y:52, pop:12000, climate:"temperate", links:["ribs","dewfen","crow"] },
+  { id:"ribs", name:"Rib-Cairn", x:28, y:32, pop:8000, climate:"cold", links:["glen","night","crow"] },
+  { id:"dewfen", name:"Dewfen", x:72, y:38, pop:9000, climate:"humid", links:["glen","coast","ember"] },
+  { id:"crow", name:"Crow Pass", x:48, y:28, pop:5000, climate:"cold", links:["glen","ribs","night"] },
+  { id:"coast", name:"Bone Coast", x:84, y:62, pop:11000, climate:"humid", links:["dewfen","ember","mouth"] },
+  { id:"ember", name:"Ember Wastes", x:62, y:78, pop:4000, climate:"hot", links:["dewfen","coast","glen"] },
+  { id:"night", name:"Nightwood", x:18, y:58, pop:7000, climate:"cold", links:["ribs","crow","mouth"] },
+  { id:"mouth", name:"Old One Mouth", x:30, y:82, pop:6000, climate:"hot", links:["night","coast","ember"] },
+];
+
+const EVOLUTIONS = [
+  { id:"wind", branch:"transmit", name:"Wind Spores", cost:6, desc:"+air spread between linked lands", fx:{air:1, inf:2} },
+  { id:"beast", branch:"transmit", name:"Beast Hide", cost:7, desc:"Carried by elk, crows, wolves", fx:{beast:1, inf:2} },
+  { id:"dewvein", branch:"transmit", name:"Dew Veins", cost:8, desc:"+water spread via rivers and coast", fx:{water:1, inf:2} },
+  { id:"warseed", branch:"transmit", name:"Warband Blood", cost:9, desc:"Each march seeds the destination", fx:{war:1, inf:1} },
+  { id:"cough", branch:"symptom", name:"Coughbloom", cost:5, desc:"Spores in the throat. +infectivity", fx:{inf:4, sev:1} },
+  { id:"fever", branch:"symptom", name:"Fever Cap", cost:6, desc:"The shamans notice. +severity", fx:{sev:4, inf:1} },
+  { id:"fervor", branch:"symptom", name:"Mycelial Fervor", cost:10, desc:"Infected convert to your creed instead of rotting as fast", fx:{convert:1, sev:2, inf:2} },
+  { id:"bloom", branch:"symptom", name:"Bone Bloom", cost:11, desc:"Ribs split into fruit. +lethality", fx:{let:5, sev:3} },
+  { id:"rot", branch:"symptom", name:"Necrotic Rot", cost:14, desc:"Villages empty. High lethality", fx:{let:8, sev:4} },
+  { id:"hunger", branch:"symptom", name:"Light Hunger", cost:8, desc:"The sick send tribute toward the hearth", fx:{tribute:1, sev:2, inf:1} },
+  { id:"cold", branch:"ability", name:"Cold Hardening", cost:7, desc:"Spreads in Nightwood and cairns", fx:{cold:2} },
+  { id:"heat", branch:"ability", name:"Heat Hardening", cost:7, desc:"Survives Ember Wastes and the Mouth", fx:{heat:2} },
+  { id:"damp", branch:"ability", name:"Gill Spores", cost:6, desc:"Loves Dewfen and the Coast", fx:{humid:2} },
+  { id:"veil", branch:"ability", name:"Fog Veil", cost:9, desc:"Hides from the cleanse", fx:{stealth:3, sev:-2} },
+  { id:"burst", branch:"ability", name:"Spore Burst", cost:12, desc:"Instant pulse of infection in every touched land", fx:{burst:1, inf:1} },
+];
+
+function blankPlague(){
+  const lands = {};
+  REGIONS.forEach(r => {
+    lands[r.id] = { inf:0, dead:0, closed:false, aware:0 };
+  });
+  lands.glen.inf = 40; // spark at the hearth
+  return {
+    dna: 8,
+    inf: 4, sev: 1, let: 0,
+    air:0, water:0, beast:0, war:0,
+    heat:0, cold:0, humid:0, stealth:0,
+    convert:0, tribute:0,
+    evolved: [],
+    lands,
+    cure: 0, cureOn: false,
+    news: "A cough in Ashen Glen. The hearth tastes of mushroom.",
+    won: null
+  };
+}
+
+function climateMul(climate, P){
+  if (climate==="hot") return 0.45 + P.heat*0.28;
+  if (climate==="cold") return 0.45 + P.cold*0.28;
+  if (climate==="humid") return 0.7 + P.humid*0.2;
+  return 1;
+}
 
 let S = null;
 let tickTimer = null;
@@ -355,12 +434,19 @@ function blankHold() {
     log: ["The hearth catches. Four souls stand in the dark."],
     warsWon: 0, unlockedMaps: 1,
     incident: null,
+    plague: blankPlague(),
     lastSave: Date.now()
   };
 }
 
 function save(){ localStorage.setItem("ashspore_v1", JSON.stringify(S)); }
-function load(){ try { return JSON.parse(localStorage.getItem("ashspore_v1")); } catch(e){ return null; } }
+function load(){
+  try {
+    const s = JSON.parse(localStorage.getItem("ashspore_v1"));
+    if (s && !s.plague) s.plague = blankPlague();
+    return s;
+  } catch(e){ return null; }
+}
 
 function allRooms(){
   const out = [];
@@ -411,6 +497,7 @@ function consumeAndProduce(dt){
   });
 
   if (!S.incident && Math.random() < 0.004*dt) startIncident();
+  tickPlague(dt);
 
   const nursery = allRooms().find(({room})=>room.type==="nursery" && room.workers.length>=2);
   if (nursery && S.dwellers.length < popCap() && Math.random() < 0.002*dt) {
@@ -438,6 +525,7 @@ function startIncident(){
     { id:"rot", title:"Spore-rot", text:"The beds blacken. Food stores bleed unless a crafter tends them." },
     { id:"whisper", title:"The Old Ones whisper", text:"Happiness frays. An altar or hearth voice can hold the tribe." },
     { id:"drought", title:"Dew dries", text:"The catchers cough dust. Dew drains until the incident ends." },
+    { id:"bloomback", title:"Bloom turns inward", text:"High lethality bites the hold. A posted seer at the Altar slows it." },
   ];
   S.incident = { ...pick(kinds), t: 28 };
   pushLog(S.incident.title + ".");
@@ -465,6 +553,13 @@ function resolveIncident(dt){
   if (S.incident.id==="rot") S.res.food = Math.max(0, S.res.food - 0.12*dt);
   if (S.incident.id==="drought") S.res.dew = Math.max(0, S.res.dew - 0.12*dt);
   if (S.incident.id==="whisper") S.happiness = Math.max(8, S.happiness - 0.15*dt);
+  if (S.incident.id==="bloomback") {
+    const altar = allRooms().some(({room})=>room.type==="altar" && room.workers.length);
+    if (!altar) {
+      S.dwellers.forEach(d => d.hp = Math.max(20, d.hp - 0.2*dt));
+      S.happiness = Math.max(10, S.happiness - 0.1*dt);
+    }
+  }
   if (S.incident.t <= 0) {
     pushLog(S.incident.title + " fades.");
     S.incident = null;
@@ -488,6 +583,185 @@ function assign(d, room){
 
 function pushLog(t){ S.log.unshift("Day "+S.day+": "+t); S.log = S.log.slice(0,40); }
 
+function worldStats(){
+  let pop=0, inf=0, dead=0;
+  REGIONS.forEach(r => {
+    const L = S.plague.lands[r.id];
+    pop += r.pop;
+    inf += Math.min(L.inf, r.pop - L.dead);
+    dead += L.dead;
+  });
+  return { pop, inf, dead, healthy: Math.max(0, pop-inf-dead) };
+}
+
+function tickPlague(dt){
+  const P = S.plague;
+  if (!P || P.won) return;
+  let newInf = 0;
+  REGIONS.forEach(r => {
+    const L = P.lands[r.id];
+    const alive = Math.max(0, r.pop - L.dead);
+    const infected = Math.min(L.inf, alive);
+    const healthy = Math.max(0, alive - infected);
+    if (alive <= 0) return;
+
+    const climate = climateMul(r.climate, P);
+    const close = L.closed ? 0.35 : 1;
+    const localRate = (0.012 + P.inf*0.004) * climate * close;
+    const spreadLocal = infected * (healthy/Math.max(1,alive)) * localRate * dt;
+    L.inf = Math.min(alive, L.inf + spreadLocal);
+    newInf += spreadLocal;
+
+    const kill = infected * (P.let * 0.0018) * dt;
+    const convertKeep = P.convert ? kill * 0.45 : 0;
+    L.dead = Math.min(r.pop, L.dead + (kill - convertKeep));
+    L.inf = Math.max(0, L.inf - kill + convertKeep*0.2);
+
+    // awareness
+    L.aware = Math.min(100, L.aware + (P.sev*0.08 - P.stealth*0.06) * (infected/Math.max(1,alive)) * dt * 8);
+    if (!L.closed && L.aware > 55 && infected/alive > 0.12) {
+      L.closed = true;
+      P.news = r.name + " seals its roads.";
+      pushLog(r.name + " seals the mycelium roads.");
+    }
+
+    // neighbor jump
+    r.links.forEach(nid => {
+      const N = P.lands[nid];
+      const dest = REGIONS.find(x=>x.id===nid);
+      if (!dest) return;
+      const destAlive = Math.max(1, dest.pop - N.dead);
+      if (N.inf > destAlive*0.98) return;
+      let chance = 0.0008 * P.inf * climateMul(dest.climate, P);
+      if (P.air) chance += 0.0012 * P.air;
+      if (P.water && (r.climate==="humid" || dest.climate==="humid")) chance += 0.0014 * P.water;
+      if (P.beast) chance += 0.001 * P.beast;
+      if (L.closed || N.closed) chance *= 0.4;
+      if (infected > 80 && Math.random() < chance * dt) {
+        const seed = 8 + P.inf*2;
+        if (N.inf <= 0) {
+          P.dna += 3;
+          P.news = "First cough in " + dest.name + ".";
+          pushLog("Ashspore seeds " + dest.name + ".");
+          toast("New land infected: " + dest.name);
+        }
+        N.inf = Math.min(destAlive, N.inf + seed);
+      }
+    });
+  });
+
+  if (newInf > 4) P.dna += Math.min(2.5, newInf/90) * dt;
+
+  // tribute
+  if (P.tribute) {
+    const { inf } = worldStats();
+    S.res.food = clamp(S.res.food + inf/18000 * dt, 0, S.cap.food);
+    S.res.bone = S.res.bone + inf/22000 * dt;
+  }
+
+  // convert births extra tribe chance
+  if (P.convert && S.dwellers.length < popCap() && Math.random() < 0.0015*dt) {
+    const d = newDweller("converted", { icon:"🍄" });
+    S.dwellers.push(d);
+    pushLog(d.name + " walks in already blooming.");
+  }
+
+  const { pop, inf, dead, healthy } = worldStats();
+  const infPct = inf / Math.max(1, pop-dead);
+
+  if (!P.cureOn && P.sev >= 6 && infPct > 0.08) {
+    P.cureOn = true;
+    P.news = "Shamans of the Mouth begin a cleanse rite.";
+    pushLog("The cleanse has begun.");
+    toast("A cleanse rite has begun.");
+  }
+  if (P.cureOn && P.won===null) {
+    const speed = Math.max(0.08, (P.sev*0.35 + infPct*4) - P.stealth*0.7);
+    P.cure = Math.min(100, P.cure + speed * dt * 0.12);
+    if (P.cure >= 100) {
+      P.won = "cure";
+      P.news = "The cleanse burns the strain back to the hearth.";
+      pushLog("DEFEAT: the cleanse completes.");
+      showPlagueEnd(false);
+    }
+  }
+
+  if (P.won===null && healthy < pop*0.02 && inf + dead > pop*0.9) {
+    P.won = "spread";
+    P.news = "Every land wears your bloom.";
+    pushLog("VICTORY: the world is Ashspore.");
+    S.res.bone += 80; S.res.spirit = clamp(S.res.spirit+20,0,S.cap.spirit);
+    showPlagueEnd(true);
+  }
+
+  if (Math.random() < 0.012*dt) {
+    const ticks = [
+      "Hunters speak of coughing elk.",
+      "A child dreams of gills.",
+      "Bone-priests count the dead wrong.",
+      "Dew tastes sweet, then metal.",
+      "Crow Pass fires its beacons.",
+    ];
+    if (Math.random()<0.5) P.news = pick(ticks);
+  }
+}
+
+function evolveStrain(id){
+  const P = S.plague;
+  const ev = EVOLUTIONS.find(e=>e.id===id);
+  if (!ev) return;
+  if (P.evolved.includes(id)) return toast("Already in the strain.");
+  if (P.dna < ev.cost) return toast("Need more DNA.");
+  P.dna -= ev.cost;
+  P.evolved.push(id);
+  const f = ev.fx;
+  if (f.inf) P.inf += f.inf;
+  if (f.sev) P.sev = Math.max(0, P.sev + f.sev);
+  if (f.let) P.let += f.let;
+  if (f.air) P.air += f.air;
+  if (f.water) P.water += f.water;
+  if (f.beast) P.beast += f.beast;
+  if (f.war) P.war += f.war;
+  if (f.heat) P.heat += f.heat;
+  if (f.cold) P.cold += f.cold;
+  if (f.humid) P.humid += f.humid;
+  if (f.stealth) P.stealth += f.stealth;
+  if (f.convert) P.convert += f.convert;
+  if (f.tribute) P.tribute += f.tribute;
+  if (f.burst) {
+    REGIONS.forEach(r => {
+      const L = P.lands[r.id];
+      if (L.inf > 0) L.inf = Math.min(r.pop-L.dead, L.inf + 220 + P.inf*20);
+    });
+    toast("Spore Burst across touched lands.");
+  }
+  pushLog("Evolved " + ev.name + ".");
+  openStrain();
+}
+
+function showPlagueEnd(win){
+  $("modal").className = "on";
+  $("modal").innerHTML = win
+    ? `<div class="card"><h2>THE WORLD WEARS YOU</h2><p>Every region coughs your name. Tribute and converts walk the roads to the hearth. The hold still needs food. The strain is eternal.</p><button class="bigbtn" id="okend">KEEP THE FIRE</button></div>`
+    : `<div class="card"><h2>THE CLEANSE</h2><p>Rival shamans finish the rite. Infection in every land is cut down. Evolve Fog Veil sooner. Seed more lands before severity wakes them.</p><button class="bigbtn" id="okend">TEND THE ASH</button></div>`;
+  $("okend").onclick = () => {
+    $("modal").className = "";
+    if (!win) {
+      REGIONS.forEach(r => { S.plague.lands[r.id].inf *= 0.08; });
+      S.plague.cure = 0; S.plague.cureOn = false; S.plague.won = null;
+      S.plague.dna = Math.max(4, S.plague.dna);
+      S.happiness = Math.max(20, S.happiness-15);
+    }
+  };
+}
+
+function regionInfectPct(id){
+  const r = REGIONS.find(x=>x.id===id);
+  const L = S.plague.lands[id];
+  const alive = Math.max(1, r.pop - L.dead);
+  return clamp(L.inf / alive, 0, 1);
+}
+
 function toast(t){
   const el = $("toast"); el.textContent = t; el.style.display = "block";
   clearTimeout(toast._t); toast._t = setTimeout(()=> el.style.display="none", 2200);
@@ -495,13 +769,16 @@ function toast(t){
 
 function renderHud(){
   const p = S.dwellers.length, cap = popCap();
+  const w = S.plague ? worldStats() : {inf:0,dead:0,pop:1};
+  const infPct = Math.floor(100 * w.inf / Math.max(1, w.pop - w.dead));
   $("hud").innerHTML = `
     <div class="res ember"><span class="dot" style="background:var(--ember)"></span>EM <div class="bar"><i style="width:${S.res.ember/S.cap.ember*100}%"></i></div>${Math.floor(S.res.ember)}</div>
     <div class="res food"><span class="dot" style="background:var(--spore)"></span>FD <div class="bar"><i style="width:${S.res.food/S.cap.food*100}%"></i></div>${Math.floor(S.res.food)}</div>
     <div class="res dew"><span class="dot" style="background:var(--dew)"></span>DW <div class="bar"><i style="width:${S.res.dew/S.cap.dew*100}%"></i></div>${Math.floor(S.res.dew)}</div>
     <div class="res spirit"><span class="dot" style="background:var(--spirit)"></span>SP <div class="bar"><i style="width:${S.res.spirit/S.cap.spirit*100}%"></i></div>${Math.floor(S.res.spirit)}</div>
-    <div class="res pop">👥 ${p}/${cap}</div>
+    <div class="res pop">👥 ${p}/${cap} · 🧬 ${Math.floor(S.plague.dna)} · 🍄 ${infPct}%</div>
     <div class="res bone">🦴 ${Math.floor(S.res.bone)} · 😊 ${Math.floor(S.happiness)} · Day ${S.day}</div>
+    <div class="news">${S.plague.cureOn ? "CLEANSE "+Math.floor(S.plague.cure)+"% · " : ""}${S.plague.news||""}</div>
   `;
 }
 
@@ -563,7 +840,7 @@ function renderHold(){
 }
 
 function closeSheets(){
-  ["sheetPeople","sheetBuild","sheetWar","sheetLog"].forEach(id => $(id).classList.remove("on"));
+  ["sheetPeople","sheetBuild","sheetWar","sheetStrain","sheetLog"].forEach(id => $(id).classList.remove("on"));
 }
 function openRoom(room){
   closeSheets();
@@ -652,7 +929,7 @@ function openBuild(targetRoom){
 }
 
 const MAPS = [
-  { id:"glen", name:"Ashen Glen", threat:1, spirit:4, reward:{bone:25, food:12},
+  { id:"glen", region:"glen", name:"Ashen Glen", threat:1, spirit:4, reward:{bone:25, food:12},
     nodes:[
       {id:0,x:.18,y:.55,type:"village",owner:"player",n:18,lv:1},
       {id:1,x:.38,y:.32,type:"village",owner:"neutral",n:8,lv:1},
@@ -663,7 +940,7 @@ const MAPS = [
     ],
     edges:[[0,1],[0,2],[1,3],[2,3],[3,4],[3,5],[4,5]]
   },
-  { id:"ribs", name:"Rib-Cairn", threat:2, spirit:8, reward:{bone:40, spirit:6, food:10},
+  { id:"ribs", region:"ribs", name:"Rib-Cairn", threat:2, spirit:8, reward:{bone:40, spirit:6, food:10},
     nodes:[
       {id:0,x:.14,y:.50,type:"village",owner:"player",n:22,lv:2},
       {id:1,x:.32,y:.28,type:"tower",owner:"neutral",n:12,lv:1},
@@ -675,7 +952,7 @@ const MAPS = [
     ],
     edges:[[0,1],[0,2],[1,3],[2,3],[3,4],[3,5],[4,6],[5,6],[1,4],[2,5]]
   },
-  { id:"oldone", name:"Mouth of the Old One", threat:3, spirit:14, reward:{bone:70, spirit:12},
+  { id:"oldone", region:"mouth", name:"Mouth of the Old One", threat:3, spirit:14, reward:{bone:70, spirit:12},
     nodes:[
       {id:0,x:.12,y:.55,type:"village",owner:"player",n:26,lv:2},
       {id:1,x:.30,y:.30,type:"village",owner:"neutral",n:14,lv:1},
@@ -699,7 +976,9 @@ function openWar(){
     ${!hasBarracks ? "<div class='row'><small>Raise a Spore Barracks to march farther maps. Glen is open.</small></div>":""}
     ${MAPS.map((m,i)=>{
       const lock = i>0 && !hasBarracks && i>=S.unlockedMaps;
-      return `<div class="row"><div><b>${m.name}</b><small>Threat ${m.threat} · costs ${m.spirit} spirit</small></div>
+      const pct = Math.floor(regionInfectPct(m.region)*100);
+      const cost = Math.max(1, m.spirit - Math.floor(pct/25));
+      return `<div class="row"><div><b>${m.name}</b><small>Threat ${m.threat} · ${cost} spirit · infected ${pct}%</small></div>
         <button class="mini hot" data-map="${m.id}" ${lock?"disabled":""}>MARCH</button></div>`;
     }).join("")}
     <button class="mini" style="width:100%" onclick="document.getElementById('sheetWar').classList.remove('on')">CLOSE</button>`;
@@ -737,20 +1016,71 @@ function openLog(){
   };
 }
 
+function openStrain(){
+  closeSheets();
+  const el = $("sheetStrain"); el.classList.add("on");
+  const P = S.plague;
+  const w = worldStats();
+  const infPct = Math.floor(100*w.inf/Math.max(1,w.pop-w.dead));
+  const deadPct = Math.floor(100*w.dead/w.pop);
+  el.innerHTML = `<h2>ASHSPORE STRAIN</h2>
+    <div class="statgrid">
+      <div class="statbox"><b>${Math.floor(P.dna)}</b><small>DNA</small></div>
+      <div class="statbox"><b>${infPct}%</b><small>infected</small></div>
+      <div class="statbox"><b>${P.cureOn?Math.floor(P.cure)+"%":"—"}</b><small>cleanse</small></div>
+    </div>
+    <div class="statgrid">
+      <div class="statbox"><b>${P.inf}</b><small>infect</small></div>
+      <div class="statbox"><b>${P.sev}</b><small>severity</small></div>
+      <div class="statbox"><b>${P.let}</b><small>lethal</small></div>
+    </div>
+    <div id="worldwrap">
+      ${REGIONS.map(r => {
+        const L = P.lands[r.id];
+        const pct = regionInfectPct(r.id);
+        const dead = L.dead / r.pop;
+        const bg = dead>0.6 ? "#2a0810" : `rgba(${Math.floor(40+pct*80)},${Math.floor(80+pct*120)},${Math.floor(30+pct*20)},.95)`;
+        const border = L.closed ? "#c44536" : (pct>0.05 ? "#7dff9a" : "#4a5a38");
+        return `<button class="region ${pct>0.2?"hot":""}" data-reg="${r.id}" style="left:${r.x}%;top:${r.y}%;background:${bg};border-color:${border}">
+          ${r.name.split(" ")[0]}<br>${Math.floor(pct*100)}%
+        </button>`;
+      }).join("")}
+    </div>
+    <p style="color:#cbb89a;font-size:12px;margin:0 0 8px">${P.news} · dead ${deadPct}%</p>
+    ${["transmit","symptom","ability"].map(br => `
+      <div style="margin:8px 0 4px;color:var(--muted);font-size:11px;letter-spacing:.12em">${br.toUpperCase()}</div>
+      ${EVOLUTIONS.filter(e=>e.branch===br).map(e => {
+        const owned = P.evolved.includes(e.id);
+        return `<div class="row"><div><b>${owned?"✓ ":""}${e.name}</b><small>${e.desc} · ${e.cost} DNA</small></div>
+          <button class="mini ${owned?"":"hot"}" data-ev="${e.id}" ${owned?"disabled":""}>${owned?"IN":"EVOLVE"}</button></div>`;
+      }).join("")}
+    `).join("")}
+    <button class="mini" style="width:100%;margin-top:8px" onclick="document.getElementById('sheetStrain').classList.remove('on')">CLOSE</button>`;
+  el.querySelectorAll("[data-ev]").forEach(b => b.onclick = () => evolveStrain(b.dataset.ev));
+  el.querySelectorAll("[data-reg]").forEach(b => b.onclick = () => {
+    const r = REGIONS.find(x=>x.id===b.dataset.reg);
+    const L = P.lands[r.id];
+    toast(r.name+" · "+r.climate+" · inf "+Math.floor(L.inf)+" / dead "+Math.floor(L.dead)+(L.closed?" · ROADS SEALED":""));
+  });
+}
+
 function startBattle(mapId){
   const map = MAPS.find(m=>m.id===mapId);
-  if (S.res.spirit < map.spirit) return toast("Not enough spirit to march.");
-  S.res.spirit -= map.spirit;
+  const pct = regionInfectPct(map.region);
+  const cost = Math.max(1, map.spirit - Math.floor(pct*100/25));
+  if (S.res.spirit < cost) return toast("Not enough spirit to march.");
+  S.res.spirit -= cost;
   closeSheets();
   $("hold").classList.remove("on");
   $("battle").classList.add("on");
   const nodes = map.nodes.map(n => ({...n, n:n.n, cooldown:0}));
   const gritBoost = S.dwellers.reduce((a,d)=>a+d.grit,0);
-  nodes.filter(n=>n.owner==="player").forEach(n => n.n = Math.floor(n.n + gritBoost*0.35));
+  nodes.filter(n=>n.owner==="player").forEach(n => n.n = Math.floor(n.n + gritBoost*0.35 + pct*10));
+  nodes.filter(n=>n.owner==="enemy").forEach(n => n.n = Math.max(4, Math.floor(n.n * (1 - pct*0.35))));
   battle = {
     map, nodes, edges: map.edges,
     waves: [], selected: null, t: 0, over: false,
-    atkMul: 1 + Math.min(0.4, gritBoost/80)
+    atkMul: 1 + Math.min(0.4, gritBoost/80) + pct*0.25
   };
   bindCanvas();
   loopBattle();
@@ -880,6 +1210,14 @@ function endBattle(win){
     S.warsWon++;
     S.unlockedMaps = Math.max(S.unlockedMaps, MAPS.findIndex(m=>m.id===map.id)+2);
     for (const [k,v] of Object.entries(map.reward)) S.res[k] = clamp((S.res[k]||0)+v, 0, S.cap[k]||999);
+    S.plague.dna += 5 + map.threat*2;
+    const L = S.plague.lands[map.region];
+    const R = REGIONS.find(r=>r.id===map.region);
+    if (L && R) {
+      const seed = 80 + S.plague.inf*12 + (S.plague.war?160:40);
+      if (L.inf <= 0) { S.plague.dna += 3; S.plague.news = "First cough in "+R.name+"."; }
+      L.inf = Math.min(R.pop-L.dead, L.inf + seed);
+    }
     let extra = "";
     if (S.dwellers.length < popCap() && Math.random()<0.65) {
       const d = newDweller("awakened");
@@ -981,7 +1319,8 @@ function startGame(fresh){
     $("modal").innerHTML = `<div class="card">
       <h2>THE FIRST NIGHT</h2>
       <p>Tap glowing bubbles to harvest. Tap a room to post tribe. Build Dens for beds, a Barracks to march, an Altar to chant.</p>
-      <p>In the Wilds: tap your mushroom village, then a linked node. Send 50%. Double-tap a village to upgrade it with 10 soldiers.</p>
+      <p>STRAIN is the plague layer: spend DNA to evolve spread, symptoms, and stealth. Infected lands are cheaper and weaker to march. If severity wakes the shamans, outrun the cleanse.</p>
+      <p>Wilds: tap your village, then a linked node. Send 50%. Double-tap a village to upgrade it with 10 soldiers.</p>
       <button class="bigbtn" id="oktut">I KEEP THE FIRE</button>
     </div>`;
     $("oktut").onclick = ()=> $("modal").className="";
@@ -993,6 +1332,7 @@ $("btnCont").onclick = () => startGame(false);
 $("btnPeople").onclick = openPeople;
 $("btnBuild").onclick = () => openBuild(null);
 $("btnWar").onclick = openWar;
+$("btnStrain").onclick = openStrain;
 $("btnLog").onclick = openLog;
 $("btnFlee").onclick = () => { if (battle) endBattle(false); };
 document.querySelectorAll(".pct").forEach(b => b.onclick = () => {
@@ -1001,7 +1341,7 @@ document.querySelectorAll(".pct").forEach(b => b.onclick = () => {
 });
 if (load()) $("btnCont").style.display = "block";
 
-["sheetPeople","sheetBuild","sheetWar","sheetLog"].forEach(id => {
+["sheetPeople","sheetBuild","sheetWar","sheetStrain","sheetLog"].forEach(id => {
   $(id).addEventListener("click", e => { if (e.target.id===id) $(id).classList.remove("on"); });
 });
 </script>

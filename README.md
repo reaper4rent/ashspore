@@ -1,12 +1,19 @@
 # ASHSPORE
-Phone-first tribe vault + capture-war.
+Phone-first tribe vault + capture-war + plague strain.
 
-Open `index.html` on your phone (Chrome / Safari). Add to Home Screen for fullscreen.
+Open `index.html` on your phone (Chrome). Add to Home Screen for fullscreen.
 
 ## Mix
-- **Fallout Shelter** — cutaway hold, assign people to rooms, resource bars, incidents, rush-collect bubbles
-- **Age of Spirits** — hearth, rites, awaken savages, spirit cost to march, Old One whispers
-- **Mushroom Wars 2** — tap-send % along roads, villages / towers / forges, capture the map
+- **Fallout Shelter** — cutaway hold, assign people, resource bars, incidents
+- **Age of Spirits** — hearth, rites, awaken savages, spirit marches
+- **Mushroom Wars 2** — tap-send % along roads, villages / towers / forges
+- **Plague Inc.** — world map, DNA evolution, infectivity / severity / lethality, transmissions, climate resist, stealth vs a rival cleanse rite
 
-## Loop
-Keep Ember / Food / Dew above zero. Carve rooms. Chant rites. March the Wilds. Bring kin home.
+## Strain loop
+Start with a cough in Ashen Glen. Earn DNA from spread and from winning Wilds maps.
+Evolve Wind Spores / Beast Hide / Dew Veins / Warband Blood to jump lands.
+Symptoms raise infect, severity, lethality, tribute, or conversion.
+Abilities beat climate and hide from the cleanse.
+Infected lands cost less spirit and fight weaker.
+If severity wakes the Mouth shamans, Fog Veil or die.
+

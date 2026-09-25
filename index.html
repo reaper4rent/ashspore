@@ -1434,19 +1434,19 @@ function bindCanvas(){
   c.onclick = ev => {
     if (!battle || battle.over) return;
     const rect = c.getBoundingClientRect();
-    const x = (ev.clientX-rect.left)/rect.width;
-    const y = (ev.clientY-rect.top)/rect.height;
-    let hit = null, best=1;
+    const px = (ev.clientX-rect.left) * devicePixelRatio;
+    const py = (ev.clientY-rect.top) * devicePixelRatio;
+    let hit = null, best=9999;
     battle.nodes.forEach(n => {
-      const d = Math.hypot(n.x-x, n.y-y);
-      if (d<0.08 && d<best){ best=d; hit=n; }
+      const P = project(n.x, n.y, c.width, c.height);
+      const d = Math.hypot(P.x-px, P.y-py);
+      if (d < 46*devicePixelRatio*P.s && d<best){ best=d; hit=n; }
     });
     if (!hit) { battle.selected=null; return; }
     if (!battle.selected) {
       if (hit.owner!=="player") { toast("That node is not yours."); return; }
       battle.selected = hit.id;
     } else if (battle.selected===hit.id) {
-      // upgrade village if player and enough
       if (hit.owner==="player" && hit.type==="village" && hit.n>=12 && hit.lv<3) {
         hit.n -= 10; hit.lv++; toast("Village raised to lv"+hit.lv);
       } else battle.selected = null;
@@ -1609,46 +1609,164 @@ function loopBattle(){
 function drawBattle(ctx, c){
   const w=c.width, h=c.height;
   ctx.clearRect(0,0,w,h);
-  if (drawBattle.bg) {
-    ctx.globalAlpha = 0.55;
+  if (drawBattle.bg && drawBattle.bg.complete) {
+    ctx.globalAlpha = 0.42;
     ctx.drawImage(drawBattle.bg, 0, 0, w, h);
     ctx.globalAlpha = 1;
-    ctx.fillStyle = "#0e0b0888"; ctx.fillRect(0,0,w,h);
   } else {
     ctx.fillStyle = "#0e0b08"; ctx.fillRect(0,0,w,h);
   }
-  // veins
-  ctx.strokeStyle = "#3a2a1c"; ctx.lineWidth = 3*devicePixelRatio;
+  ctx.fillStyle = "#0b0706aa"; ctx.fillRect(0,0,w,h);
+
+  // ground grid in 2.5D
+  ctx.strokeStyle = "rgba(80,50,30,0.28)";
+  ctx.lineWidth = 1;
+  for (let i=0;i<=8;i++){
+    const a = project(0, i/8, w, h), b = project(1, i/8, w, h);
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    const c1 = project(i/8, 0, w, h), c2 = project(i/8, 1, w, h);
+    ctx.beginPath(); ctx.moveTo(c1.x,c1.y); ctx.lineTo(c2.x,c2.y); ctx.stroke();
+  }
+
   battle.edges.forEach(([a,b])=>{
-    const A=battle.nodes[a], B=battle.nodes[b];
-    ctx.beginPath(); ctx.moveTo(A.x*w, A.y*h); ctx.lineTo(B.x*w, B.y*h); ctx.stroke();
+    const A=project(battle.nodes[a].x, battle.nodes[a].y, w, h);
+    const B=project(battle.nodes[b].x, battle.nodes[b].y, w, h);
+    ctx.strokeStyle = "rgba(125,200,120,0.45)";
+    ctx.lineWidth = 5*devicePixelRatio;
+    ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,160,60,0.25)";
+    ctx.lineWidth = 2*devicePixelRatio;
+    ctx.stroke();
   });
-  battle.waves.forEach(wave=>{
+
+  const sprites = [];
+  battle.nodes.forEach(n => sprites.push({ y:n.y, kind:"bldg", n }));
+  battle.waves.forEach(wave => {
     const A=battle.nodes[wave.from], B=battle.nodes[wave.to];
-    const x = (A.x + (B.x-A.x)*wave.p)*w;
-    const y = (A.y + (B.y-A.y)*wave.p)*h;
-    ctx.fillStyle = wave.owner==="player" ? ((UNITS[wave.kind]||UNITS.sporeling).color) : "#8b4dff";
-    ctx.beginPath(); ctx.arc(x,y, 8*devicePixelRatio + Math.min(8, wave.n/8), 0, 6.28); ctx.fill();
-    ctx.fillStyle = "#fff"; ctx.font = (11*devicePixelRatio)+"px sans-serif";
-    ctx.textAlign="center";
-    ctx.fillText((UNITS[wave.kind]||UNITS.sporeling).icon, x, y+4*devicePixelRatio);
-    ctx.font = (8*devicePixelRatio)+"px sans-serif";
-    ctx.fillText(Math.floor(wave.n), x, y+16*devicePixelRatio);
+    const x = A.x + (B.x-A.x)*wave.p;
+    const y = A.y + (B.y-A.y)*wave.p;
+    sprites.push({ y, kind:"wave", wave, x, facing: B.x>=A.x ? 1 : -1 });
   });
-  battle.nodes.forEach(n=>{
-    const x=n.x*w, y=n.y*h, r=22*devicePixelRatio;
-    const col = n.owner==="player"?"#ff8a3d": n.owner==="enemy"?"#8b4dff":"#6d6458";
-    ctx.beginPath(); ctx.arc(x,y,r,0,6.28);
-    ctx.fillStyle = "#1a120e"; ctx.fill();
-    ctx.lineWidth = (battle.selected===n.id?5:3)*devicePixelRatio;
-    ctx.strokeStyle = col; ctx.stroke();
-    ctx.fillStyle = col; ctx.font = (11*devicePixelRatio)+"px sans-serif";
-    ctx.textAlign="center";
-    const icon = n.type==="tower"?"🗼": n.type==="forge"?"⚒️":"🍄";
-    ctx.fillText(icon+" "+Math.floor(n.n), x, y+4*devicePixelRatio);
-    ctx.fillStyle = "#e8d7b0"; ctx.font = (8*devicePixelRatio)+"px sans-serif";
-    ctx.fillText(n.type+" L"+n.lv, x, y+r+12*devicePixelRatio);
+  sprites.sort((a,b)=>a.y-b.y);
+  sprites.forEach(s => {
+    if (s.kind==="bldg") drawBuilding25(ctx, s.n, w, h);
+    else drawSquad25(ctx, s.wave, s.x, s.y, s.facing, w, h);
   });
+}
+
+function project(nx, ny, w, h){
+  return {
+    x: (nx-0.5)*w*0.94 + w*0.5,
+    y: ny*h*0.58 + h*0.20,
+    s: 0.68 + ny*0.50
+  };
+}
+
+const UNIT_IMG = {};
+["sporeling","boneguard","capthrow","veinwalker","convert","seerspark"].forEach(k => {
+  const im = new Image();
+  im.src = "art/units/"+k+".png";
+  UNIT_IMG[k] = im;
+});
+
+function drawBuilding25(ctx, n, w, h){
+  const P = project(n.x, n.y, w, h);
+  const dpr = devicePixelRatio;
+  const s = P.s * dpr;
+  const col = n.owner==="player"?"#ff8a3d": n.owner==="enemy"?"#8b4dff":"#8a7a68";
+  ctx.save();
+  ctx.translate(P.x, P.y);
+  // shadow
+  ctx.fillStyle = "rgba(0,0,0,0.45)";
+  ctx.beginPath(); ctx.ellipse(0, 8*s, 28*s, 10*s, 0, 0, 6.28); ctx.fill();
+  if (n.type==="tower"){
+    isoBox(ctx, -10*s, -8*s, 20*s, 14*s, 46*s, col, "#2a1a12");
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.moveTo(-12*s, -54*s); ctx.lineTo(0, -78*s); ctx.lineTo(12*s, -54*s); ctx.closePath(); ctx.fill();
+  } else if (n.type==="forge"){
+    isoBox(ctx, -16*s, -10*s, 32*s, 18*s, 18*s, "#5a3a22", "#2a1a12");
+    ctx.fillStyle = "#ff6a2a";
+    ctx.beginPath(); ctx.arc(0, -22*s, 8*s, 0, 6.28); ctx.fill();
+  } else {
+    isoBox(ctx, -18*s, -12*s, 36*s, 20*s, 16*s, "#3a2418", "#1a100c");
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.ellipse(0, -28*s, 26*s, 12*s, 0, 0, 6.28); ctx.fill();
+    ctx.fillStyle = "#1a100c";
+    ctx.beginPath(); ctx.ellipse(0, -24*s, 12*s, 6*s, 0, 0, 6.28); ctx.fill();
+  }
+  if (battle.selected===n.id){
+    ctx.strokeStyle = "#ffe08a"; ctx.lineWidth = 2*dpr;
+    ctx.beginPath(); ctx.ellipse(0, 8*s, 32*s, 12*s, 0, 0, 6.28); ctx.stroke();
+  }
+  ctx.fillStyle = "#f4e8d4";
+  ctx.font = `bold ${11*s}px sans-serif`;
+  ctx.textAlign = "center";
+  ctx.fillText(Math.floor(n.n), 0, 22*s);
+  ctx.restore();
+
+  // idle garrison billboards
+  const idle = Math.min(4, Math.max(1, Math.floor(n.n/8)));
+  const kind = n.owner==="enemy" ? "boneguard" : "sporeling";
+  if (n.owner!=="neutral") {
+    for (let i=0;i<idle;i++){
+      const ox = (i-(idle-1)/2)*14;
+      drawUnitBillboard(ctx, P.x+ox*s, P.y-6*s, kind, n.owner, P.s*0.72, 1, battle.t*3+i);
+    }
+  }
+}
+
+function isoBox(ctx, x, y, w, d, hgt, top, side){
+  // simple 2.5d block: front + top + right
+  ctx.fillStyle = side;
+  ctx.beginPath();
+  ctx.moveTo(x, y); ctx.lineTo(x+w, y); ctx.lineTo(x+w, y-hgt); ctx.lineTo(x, y-hgt); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = top;
+  ctx.beginPath();
+  ctx.moveTo(x, y-hgt); ctx.lineTo(x+w*0.35, y-hgt-d*0.45); ctx.lineTo(x+w+w*0.35, y-hgt-d*0.45); ctx.lineTo(x+w, y-hgt); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#0006";
+  ctx.beginPath();
+  ctx.moveTo(x+w, y); ctx.lineTo(x+w+w*0.35, y-d*0.45); ctx.lineTo(x+w+w*0.35, y-hgt-d*0.45); ctx.lineTo(x+w, y-hgt); ctx.closePath(); ctx.fill();
+}
+
+function drawSquad25(ctx, wave, nx, ny, facing, w, h){
+  const P = project(nx, ny, w, h);
+  const count = Math.min(6, Math.max(1, Math.ceil(wave.n/8)));
+  for (let i=0;i<count;i++){
+    const col = i % 3, row = Math.floor(i/3);
+    const ox = (col-1)*16*P.s*devicePixelRatio;
+    const oy = row*10*P.s*devicePixelRatio;
+    drawUnitBillboard(ctx, P.x+ox, P.y+oy, wave.kind||"sporeling", wave.owner, P.s, facing, battle.t*8 + i);
+  }
+  ctx.fillStyle = "#fff";
+  ctx.font = `bold ${10*devicePixelRatio}px sans-serif`;
+  ctx.textAlign = "center";
+  ctx.fillText(Math.floor(wave.n), P.x, P.y + 28*P.s*devicePixelRatio);
+}
+
+function drawUnitBillboard(ctx, x, y, kind, owner, scale, facing, t){
+  const img = UNIT_IMG[kind] || UNIT_IMG.sporeling;
+  const dpr = devicePixelRatio;
+  const bob = Math.sin(t)*3*dpr*scale;
+  const hover = kind==="seerspark" ? Math.sin(t*0.6)*6*dpr : 0;
+  const hgt = 52 * dpr * scale;
+  const wid = 36 * dpr * scale;
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.4)";
+  ctx.beginPath(); ctx.ellipse(x, y+8*dpr, wid*0.42, 5*dpr*scale, 0, 0, 6.28); ctx.fill();
+  ctx.translate(x, y - hgt*0.55 + bob - hover);
+  ctx.scale(facing<0 ? -1 : 1, 1);
+  if (img && img.complete && img.naturalWidth){
+    if (owner==="enemy"){
+      ctx.filter = "hue-rotate(210deg) saturate(1.15)";
+    }
+    ctx.drawImage(img, -wid/2, -hgt/2, wid, hgt);
+    ctx.filter = "none";
+  } else {
+    ctx.fillStyle = owner==="enemy" ? "#8b4dff" : (UNITS[kind]||UNITS.sporeling).color;
+    ctx.fillRect(-wid*0.2, 0, wid*0.4, hgt*0.5);
+    ctx.beginPath(); ctx.arc(0, -hgt*0.15, wid*0.28, 0, 6.28); ctx.fill();
+  }
+  ctx.restore();
 }
 
 function tick(){
